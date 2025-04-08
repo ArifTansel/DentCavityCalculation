@@ -4,10 +4,10 @@ import numpy as np
 from sklearn.cluster import KMeans
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
-import open3d.visualization.gui as gui
-import open3d.visualization.rendering as rendering
+from open3d.visualization import gui
+from open3d.visualization import rendering
 # Load the tooth STL model using Trimesh
-mesh_trimesh = trimesh.load_mesh("stlFiles/sinifBirNumaraAlti.stl")
+mesh_trimesh = trimesh.load_mesh("stlFiles/Rough.stl")
 
 # Get vertices, faces, and normals
 vertices = np.array(mesh_trimesh.vertices)
@@ -138,7 +138,7 @@ def extract_cavity_bottom(largest_cavity_mesh, threshold_percentage=0.1):
     bottom_mesh.compute_vertex_normals()
     
     # Set color for visualization
-    bottom_colors = np.ones((len(unique_vertices), 3)) * [0, 0, 1]  # Blue for bottom surface
+    bottom_colors = np.ones((len(unique_vertices), 3)) * [0, 1, 0]  # Blue for bottom surface
     bottom_mesh.vertex_colors = o3d.utility.Vector3dVector(bottom_colors)
     
     return bottom_mesh
@@ -151,6 +151,32 @@ cavity_vertices= np.asarray(largest_cavity_mesh.vertices)
 
 
 cavity_bottom = extract_cavity_bottom(largest_cavity_mesh, threshold_percentage=0.4)
+# 153'ünücü satırın altına
+cavity_bottom.compute_vertex_normals()
+
+######################### convert a open3d Triangle mesh to a trimesh mesh
+
+# Convert to numpy arrays
+cav_bot_vertices = np.asarray(cavity_bottom.vertices)
+cav_bot_faces = np.asarray(cavity_bottom.triangles)
+
+# Create a Trimesh object
+tri_mesh = trimesh.Trimesh(vertices=cav_bot_vertices, faces=cav_bot_faces, process=False)
+
+######################### calculate smoothness
+
+normals = tri_mesh.face_normals
+adj = tri_mesh.face_adjacency
+
+# Compute angle between adjacent face normals
+dot = np.einsum('ij,ij->i', normals[adj[:, 0]], normals[adj[:, 1]])
+angles = np.arccos(np.clip(dot, -1.0, 1.0))
+angles_deg = np.degrees(angles)
+
+print("Mean angle between adjacent faces:", np.mean(angles_deg))
+print("Standard deviation (roughness):", np.std(angles_deg))
+
+#########################
 
 # kavite altının z eksenindeki ortalamasını al
 
@@ -176,7 +202,7 @@ line_set.colors = o3d.utility.Vector3dVector([[1, 0, 0]])  # Mavi çizgi
 
 print(cavity_depth)
 
-# o3d.visualization.draw_geometries([line_set,cavity_bottom])
+o3d.visualization.draw_geometries([line_set,cavity_bottom])
 
 app = gui.Application.instance
 app.initialize()
@@ -187,10 +213,12 @@ widget3d.scene = rendering.Open3DScene(window.renderer)
 window.add_child(widget3d)
 
 mat_cavity = rendering.MaterialRecord()
-mat_cavity.base_color = np.array([1.0, 0.0, 0.0, 1.0], dtype=np.float32)  # RGBA
+mat_cavity.shader = 'defaultLit'
+# mat_cavity.base_color = np.array([0.5, 0.0, 0.0, 1.0], dtype=np.float32)  # RGBA
 widget3d.scene.add_geometry("cavity_bottom", cavity_bottom, mat_cavity)
 
 mat_line = rendering.MaterialRecord()
+mat_line.shader = 'defaultLit'
 mat_line.base_color = np.array([1.0, 0.0, 0.0, 1.0], dtype=np.float32)  # RGBA
 widget3d.scene.add_geometry("depth_line", line_set,mat_line)
 

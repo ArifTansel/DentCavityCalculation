@@ -2,8 +2,11 @@ import trimesh
 import open3d as o3d
 import numpy as np
 from sklearn.cluster import KMeans
+
+### not successful
+
 # Load the tooth STL model using Trimesh
-mesh_trimesh = trimesh.load_mesh("sinifBirNumaraAlti.stl")
+mesh_trimesh = trimesh.load_mesh("stlFiles/sinifBirNumaraAlti.stl")
 
 # Get vertices, faces, and normals
 vertices = np.array(mesh_trimesh.vertices)

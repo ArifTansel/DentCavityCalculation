@@ -6,7 +6,7 @@ from sklearn.linear_model import RANSACRegressor
 from scipy.spatial import ConvexHull
 
 # Load the tooth STL model
-mesh_trimesh = trimesh.load_mesh("heh.stl")
+mesh_trimesh = trimesh.load_mesh("stlFiles/sinifBirNumaraAlti.stl")
 
 # Get vertices, faces, and normals
 vertices = np.array(mesh_trimesh.vertices)
