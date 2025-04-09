@@ -151,7 +151,7 @@ cavity_vertices= np.asarray(largest_cavity_mesh.vertices)
 
 
 cavity_bottom = extract_cavity_bottom(largest_cavity_mesh, threshold_percentage=0.4)
-
+cavity_bottom.compute_vertex_normals()
 # kavite altının z eksenindeki ortalamasını al
 
 bottom_vertices = np.asarray(cavity_bottom.vertices)
@@ -186,11 +186,16 @@ widget3d = gui.SceneWidget()
 widget3d.scene = rendering.Open3DScene(window.renderer)
 window.add_child(widget3d)
 
+mesh = o3d.geometry.TriangleMesh.create_sphere()
+mesh.compute_vertex_normals()
+
 mat_cavity = rendering.MaterialRecord()
+mat_cavity.shader = "defaultLit"
 mat_cavity.base_color = np.array([1.0, 0.0, 0.0, 1.0], dtype=np.float32)  # RGBA
-widget3d.scene.add_geometry("cavity_bottom", cavity_bottom, mat_cavity)
+widget3d.scene.add_geometry("cavity_bottom", mesh, mat_cavity)
 
 mat_line = rendering.MaterialRecord()
+mat_line.shader = "defaultLit"
 mat_line.base_color = np.array([1.0, 0.0, 0.0, 1.0], dtype=np.float32)  # RGBA
 widget3d.scene.add_geometry("depth_line", line_set,mat_line)
 
@@ -203,7 +208,7 @@ midpoint = [(min_z_point[0] + max_z_point[0])/2,
             (min_z_point[2] + max_z_point[2])/2]
 # Add a 3D text label at the midpoint
 depth_str = f"{cavity_depth:.4f}"
-widget3d.add_3d_label(midpoint, depth_str)
+# widget3d.add_3d_label(midpoint, depth_str) 
 
 
 
