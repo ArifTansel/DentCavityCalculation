@@ -1,2 +1,4 @@
-patatest.py
-patatest.ipynb
+output/
+stlFiles/
+temp/
+.conda/

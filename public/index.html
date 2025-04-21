@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="fetchFileNames.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+          "three/examples/jsm/loaders/PLYLoader.js": "https://unpkg.com/three@0.159.0/examples/jsm/loaders/PLYLoader.js",
+          "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js"
+        }
+      }
+    </script>
+    <script type="module" src="/js/viewer.js"></script>
+
+    <title>Select List Layout - Dark Mode</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .custom-table-container {
+        width: 25%; /* sayfanın yarısı kadar genişlik */
+        margin-left: 30px; /* soldan boşluk */
+        margin-top: 40px;
+        font-size: 0.9rem;
+      }
+      body {
+        padding: 20px;
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .content-area {
+        min-height: 400px;
+        background-color: #1e1e1e;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+        border: 1px solid #333;
+      }
+
+      .btn-custom {
+        width: 100%;
+        margin-bottom: 10px;
+        text-align: left;
+      }
+
+      .top-section {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+        margin-bottom: 20px;
+        border: 1px solid #333;
+      }
+
+      .form-select {
+        background-color: #2d2d2d;
+        border-color: #444;
+        color: #e0e0e0;
+      }
+
+      .form-select:focus {
+        background-color: #2d2d2d;
+        border-color: #666;
+        color: #ffffff;
+      }
+
+      .input-group .form-select {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+
+      .input-group .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Top section with select dropdown and button -->
+      <div class="top-section">
+        <div class="input-group">
+          <select class="form-select" id="optionSelect">
+            <option selected>Choose an option...</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+            <option value="4">Option 4</option>
+            <option value="5">Option 5</option>
+          </select>
+          <button class="btn btn-primary" id="selectButton">Select</button>
+        </div>
+      </div>
+      <div>
+        <p id="status"></p>
+      </div>
+
+      <!-- Main content area -->
+      <div class="row">
+        <!-- Left side with 4 buttons stacked vertically -->
+        <div class="col-md-3 mb-3">
+          <div class="d-grid gap-2">
+            <button
+              class="btn btn-outline-primary btn-custom"
+              onclick='loadSTL("tooth_o3d")'
+            >
+              Öğrencinin dişi
+            </button>
+            <button
+              class="btn btn-outline-info btn-custom"
+              id="button2"
+              onclick='loadSTL("../Master")'
+            >
+              Master Diş
+            </button>
+            <button
+              class="btn btn-outline-success btn-custom"
+              id="button3"
+              onclick='loadSTL("colored_roughness")'
+            >
+              Pürüzlülük
+            </button>
+            <button
+              class="btn btn-outline-warning btn-custom"
+              id="button4"
+              onclick='loadSTL("cavity_depth_mesh");loadSTL("tooth_o3d")'
+            >
+              Kavite Derinliği
+            </button>
+            <button
+              class="btn btn-outline-warning btn-custom"
+              id="button5"
+              onclick='loadSTL("tooth_dimension_cylinder_meshes");loadSTL("tooth_o3d")'
+            >
+              Diş Genişliği ve Uzunluğu
+            </button>
+
+            <button class="btn btn-outline-warning btn-custom" onclick='loadSTL("cavity_dimension_cylinder_meshes");loadSTL("tooth_o3d")'>
+              Kavite Genişliği ve Uzunluğu
+            </button>
+            <!-- <button class="btn btn-outline-warning btn-custom" id="button7">
+              Kavite Derinliği
+            </button> -->
+          </div>
+        </div>
+
+        <!-- Right side wide div for future content -->
+        <div class="col-md-9">
+          <div class="content-area p-4" id="viewer">
+            <!-- your content -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="custom-table-container">
+      <h6 class="mb-3 text-muted">Cavity Analysis</h6>
+      <table class="table table-sm table-bordered shadow-sm">
+        <tbody>
+          <tr>
+            <th scope="row">Kavite Duvarı Sağ Açısı</th>
+            <td id="right_angle">--</td>
+          </tr>
+          <tr>
+            <th scope="row">Kavite Duvarı Sol Açısı</th>
+            <td id="left_angle">--</td>
+          </tr>
+          <tr>
+            <th scope="row">Kavite Derinliği</th>
+            <td id="cavity_depth">--</td>
+          </tr>
+          <tr>
+            <th scope="row">Kavite Taban Pürüzlülüğü</th>
+            <td id="roughness">--</td>
+          </tr>
+          <tr>
+            <th scope="row">Kavite B-L Boyutu</th>
+            <td id="b_l_length_ratio">--</td>
+          </tr>
+          <tr>
+            <th scope="row">Kavite M-D Boyutu</th>
+            <td id="m_d_length_ratio">--</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  </body>
+
+  <script>
+    document
+      .getElementById("selectButton")
+      .addEventListener("click", function () {
+        const selectedValue = document.getElementById("optionSelect").value;
+        const statusValue = document.getElementById("status");
+        statusValue.innerText = "Hesaplanıyor...";
+
+        const right_angle = document.getElementById("right_angle");
+        const left_angle = document.getElementById("left_angle");
+        const cavity_depth = document.getElementById("cavity_depth");
+        const roughness = document.getElementById("roughness");
+        const b_l_length_ratio = document.getElementById("b_l_length_ratio");
+        const m_d_length_ratio = document.getElementById("m_d_length_ratio");
+
+
+        // Example POST request
+        fetch("http://localhost:3000/api/select", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ selectedOption: selectedValue }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Success:", data);
+
+            right_angle.innerText = data.output.right_angle;
+            left_angle.innerText = data.output.left_angle;
+            cavity_depth.innerText = data.output.cavity_depth + " mm";
+            roughness.innerText = data.output.roughness;
+            b_l_length_ratio.innerText = data.output.b_l_length_ratio;
+            m_d_length_ratio.innerText = data.output.m_d_length_ratio;
+
+            statusValue.innerText = "Hesaplandı öğrenci notu :  ";
+          })
+          .catch((error) => {
+            statusValue.innerText = "ERRORR :  ";
+
+            console.error("Error:", error);
+          });
+      });
+  </script>
+</html>
