@@ -194,21 +194,43 @@
   </body>
 
   <script>
-    document
-      .getElementById("selectButton")
-      .addEventListener("click", function () {
-        const selectedValue = document.getElementById("optionSelect").value;
-        const statusValue = document.getElementById("status");
-        statusValue.innerText = "Hesaplanıyor...";
 
-        const right_angle = document.getElementById("right_angle");
+    function writeData(data) {
+      const right_angle = document.getElementById("right_angle");
         const left_angle = document.getElementById("left_angle");
         const cavity_depth = document.getElementById("cavity_depth");
         const roughness = document.getElementById("roughness");
         const b_l_length_ratio = document.getElementById("b_l_length_ratio");
         const m_d_length_ratio = document.getElementById("m_d_length_ratio");
 
+        right_angle.innerText = data.right_angle;
+        left_angle.innerText = data.left_angle;
+        cavity_depth.innerText = data.cavity_depth + " mm";
+        roughness.innerText = data.roughness;
+        b_l_length_ratio.innerText = data.b_l_length_ratio;
+        m_d_length_ratio.innerText = data.m_d_length_ratio;
+    }
+    function deleteData() {
+      const right_angle = document.getElementById("right_angle");
+      const left_angle = document.getElementById("left_angle");
+      const cavity_depth = document.getElementById("cavity_depth");
+      const roughness = document.getElementById("roughness");
+      const b_l_length_ratio = document.getElementById("b_l_length_ratio");
+      const m_d_length_ratio = document.getElementById("m_d_length_ratio");
 
+      right_angle.innerText = "--";
+      left_angle.innerText = "--";
+      cavity_depth.innerText = "--";
+      roughness.innerText = "--" ;
+      b_l_length_ratio.innerText = "--" ;
+      m_d_length_ratio.innerText = "--" ;
+    }
+    document
+      .getElementById("selectButton")
+      .addEventListener("click", function () {
+        const selectedValue = document.getElementById("optionSelect").value;
+        const statusValue = document.getElementById("status");
+        statusValue.innerText = "Hesaplanıyor...";
         // Example POST request
         fetch("http://localhost:3000/api/select", {
           method: "POST",
@@ -220,14 +242,7 @@
           .then((response) => response.json())
           .then((data) => {
             console.log("Success:", data);
-
-            right_angle.innerText = data.output.right_angle;
-            left_angle.innerText = data.output.left_angle;
-            cavity_depth.innerText = data.output.cavity_depth + " mm";
-            roughness.innerText = data.output.roughness;
-            b_l_length_ratio.innerText = data.output.b_l_length_ratio;
-            m_d_length_ratio.innerText = data.output.m_d_length_ratio;
-
+            writeData(data)
             statusValue.innerText = "Hesaplandı öğrenci notu :  ";
           })
           .catch((error) => {
@@ -236,5 +251,34 @@
             console.error("Error:", error);
           });
       });
+    document.getElementById('optionSelect').addEventListener('change', function () {
+    const selectedValue = this.value;
+    console.log(selectedValue)
+    // Seçim "Choose an option..." ise işlem yapma
+    if (selectedValue === "Choose an option...") return;
+    const statusValue = document.getElementById("status");
+
+
+    fetch(`../output/${selectedValue}/data.json`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('JSON dosyası yüklenemedi');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(`Seçilen değer: Option ${selectedValue}`);
+        console.log(data)
+        writeData(data)
+      })
+      .catch(error => {
+        console.log(error)
+        deleteData()
+        statusValue.innerText="Hesaplama yapılmadı hesaplama yapmak için hesapla butonuna basınız."
+      });
+  });
+
+
+
   </script>
 </html>

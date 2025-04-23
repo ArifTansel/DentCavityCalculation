@@ -86,7 +86,7 @@ def visualize_roughness(cavity_bottom, full_tooth_mesh):
     colors = np.zeros((len(full_vertices), 3))
     
     # Önce tüm dişi mavi yap (düz alanlar)
-    colors[:, :] = [0.5, 0.5, 0.5]  # Medium gray
+    colors[:, :] = [0.8, 0.8, 0.8]  # Medium gray
     
     # Cavity vertex'lerinin tam diş modelindeki indekslerini bul ve bu pozisyonları renklendir
     # NOT: Bu kısım, cavity_bottom vertex'lerinin full_tooth_mesh içindeki aynı koordinatlara sahip vertex'leri bulma mantığına dayanır

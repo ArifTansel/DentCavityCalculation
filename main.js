@@ -73,11 +73,7 @@ app.post('/api/select', (req, res) => {
         }
         console.log(`Command output: ${stdout}`);
         const outputJson = JSON.parse(stdout);
-        res.json({ 
-            success: true, 
-            file: selectedFile,
-            output: outputJson
-        });
+        res.json(outputJson);  //buraya bak
     });
 });
 // Serve files from the output directory

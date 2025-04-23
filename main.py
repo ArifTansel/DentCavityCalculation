@@ -9,7 +9,11 @@ import json
 
 from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_percentage
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
-from utils import split_side_and_get_normal_means, calculate_roughness
+from utils import split_side_and_get_normal_means, calculate_roughness, discrete_mean_curvature_measure_gpu
+
+
+BOTTOM_THRESHOLD_PERCENTAGE=0.4
+MEAN_CURVATURE_RADİUS=2
 
 ### Load and compute the mean curvature
 # Load the tooth STL model using Trimesh
@@ -30,7 +34,7 @@ tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
 tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
 
 # Compute Mean Curvature using Trimesh
-mean_curvature = trimesh.curvature.discrete_mean_curvature_measure(mesh_trimesh, mesh_trimesh.vertices, radius=2)
+mean_curvature = discrete_mean_curvature_measure_gpu(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
 
 ### kavitenin seçilmesi 
 cavity_indices = np.where(mean_curvature < 0.4)[0]  # Select all vertices with negative curvature
@@ -44,7 +48,7 @@ cavity_dimension_cylinder_meshes, cavity_width, cavity_length = show_mesh_dimens
 
 
 ### Kavitenin alt kısmının seçilmesi ve kavite yüksekliğinin hesaplanması
-side_bottom, cavity_bottom = extract_cavity_parts(largest_cavity_mesh, bottom_threshold_percentage=0.4)
+side_bottom, cavity_bottom = extract_cavity_parts(largest_cavity_mesh, BOTTOM_THRESHOLD_PERCENTAGE)
 
 # kavite altının z eksenindeki ortalamasını al
 bottom_vertices = np.asarray(cavity_bottom.vertices)
@@ -97,8 +101,10 @@ data = {
     "roughness":  np.std(roughness),
     "m_d_length_ratio" : m_d_length_ratio ,
     "b_l_length_ratio" : b_l_length_ratio
-
 }
 # JSON verisini string'e dönüştürüp yazdırma api stdout olarak alacak
 print(json.dumps(data))
 
+# JSON dosyasına yazma
+with open(f"output/{mkdir}/data.json", "w") as f:
+    json.dump(data, f, indent=4)
