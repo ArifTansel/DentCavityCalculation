@@ -94,3 +94,6 @@ def calculate_roughness(mesh):
     angles = np.arccos(np.clip(dot, -1.0, 1.0)) # Mean angle
     angles_deg = np.degrees(angles) # roughness
     return angles_deg
+
+def calculate_distal_mesial_marginal_ridge_width():
+    pass

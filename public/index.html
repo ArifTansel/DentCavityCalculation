@@ -78,6 +78,16 @@
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
       }
+      .custom-table-container {
+        display: flex;
+        gap: 20px; /* space between tables */
+        flex-wrap: wrap; /* allows wrapping on small screens */
+      }
+
+      .table-box {
+        flex: 1;
+        min-width: 300px; /* prevents tables from becoming too narrow */
+      }
     </style>
   </head>
   <body>
@@ -158,37 +168,149 @@
       </div>
     </div>
 
-    <div class="custom-table-container">
-      <h6 class="mb-3 text-muted">Cavity Analysis</h6>
-      <table class="table table-sm table-bordered shadow-sm">
-        <tbody>
-          <tr>
-            <th scope="row">Kavite Duvarı Sağ Açısı</th>
-            <td id="right_angle">--</td>
-          </tr>
-          <tr>
-            <th scope="row">Kavite Duvarı Sol Açısı</th>
-            <td id="left_angle">--</td>
-          </tr>
-          <tr>
-            <th scope="row">Kavite Derinliği</th>
-            <td id="cavity_depth">--</td>
-          </tr>
-          <tr>
-            <th scope="row">Kavite Taban Pürüzlülüğü</th>
-            <td id="roughness">--</td>
-          </tr>
-          <tr>
-            <th scope="row">Kavite B-L Boyutu</th>
-            <td id="b_l_length_ratio">--</td>
-          </tr>
-          <tr>
-            <th scope="row">Kavite M-D Boyutu</th>
-            <td id="m_d_length_ratio">--</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="container">
+      <div class="row">
+        <!-- Left: Cavity Analysis Table -->
+        <div class="col-md-6 mb-4">
+          <h6 class="mb-3 text-muted">Cavity Analysis</h6>
+          <table class="table table-sm table-bordered shadow-sm">
+            <tbody>
+              <tr><th scope="row">Kavite Duvarı Sağ Açısı</th><td id="right_angle">--</td></tr>
+              <tr><th scope="row">Kavite Duvarı Sol Açısı</th><td id="left_angle">--</td></tr>
+              <tr><th scope="row">Kavite Derinliği</th><td id="cavity_depth">--</td></tr>
+              <tr><th scope="row">Kavite Taban Pürüzlülüğü</th><td id="roughness">--</td></tr>
+              <tr><th scope="row">Kavite B-L Boyutu</th><td id="b_l_length_ratio">--</td></tr>
+              <tr><th scope="row">Kavite M-D Boyutu</th><td id="m_d_length_ratio">--</td></tr>
+              <tr><th scope="row">Skor</th><td id="score">--</td></tr>
+            </tbody>
+          </table>
+        </div>
+    
+        <!-- Right: Grading Criteria Table -->
+        <div class="col-md-6 mb-4">
+          <table class="table table-sm table-bordered shadow-sm">
+            <thead>
+              <tr>
+                <th>Criteria</th>
+                <th>Ideal (Score = 10)</th>
+                <th>Moderate (Score = 5)</th>
+                <th>Unacceptable (Score = 0)</th>
+                <th>Notes/Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Outline form</td>
+                <td>1.58 - 2.00</td>
+                <td>1.4 - 1.57 or 2.01 - 3.5</td>
+                <td>&lt;1.4 or &gt;3.5</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Mesial Isthmus Width</td>
+                <td>1.5 - 1.99</td>
+                <td>1.0 - 1.49 or 2.01 - 2.5</td>
+                <td>&lt;1.0 or &gt;2.5</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Distal Isthmus Width</td>
+                <td>1.5 - 1.99</td>
+                <td>1.0 - 1.49 or 2.01 - 2.5</td>
+                <td>&lt;1.0 or &gt;2.5</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Buccal-Lingual Width</td>
+                <td>2.7 - 3.3</td>
+                <td>2.5 - 2.69 or 3.31 - 3.5</td>
+                <td>&lt;2.5 or &gt;3.5</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Buccal-Lingual Width Ratio</td>
+                <td>0.35 - 0.45</td>
+                <td>0.29 - 0.34</td>
+                <td>&lt;0.29 or ≥0.45</td>
+                <td>Ratio</td>
+              </tr>
+              <tr>
+                <td>Mesio-distal Width</td>
+                <td>7.1 - 8.29</td>
+                <td>6.6 - 7.0</td>
+                <td>&gt;8.3</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Mesio-distal Width Ratio</td>
+                <td>0.65 - 0.75</td>
+                <td>0.60 - 0.649</td>
+                <td>&gt;0.75</td>
+                <td>Ratio</td>
+              </tr>
+              <tr>
+                <td>Mesial Marginal Ridge Width</td>
+                <td>1.2 - 1.6</td>
+                <td>1.0 - 1.2 or 1.6 - 2.0</td>
+                <td>&lt;1.3 or &gt;2.2</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Mesial Marginal Ridge Width Ratio</td>
+                <td>0.11 - 0.15</td>
+                <td>0.09 - 0.109 or 0.151 - 0.18</td>
+                <td>&lt;0.09 or &gt;0.18</td>
+                <td>Ratio</td>
+              </tr>
+              <tr>
+                <td>Distal Marginal Ridge Width</td>
+                <td>1.2 - 1.6</td>
+                <td>1.0 - 1.2 or 1.6 - 2.0</td>
+                <td>&lt;1.3 or &gt;2.2</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Distal Marginal Ridge Width Ratio</td>
+                <td>0.11 - 0.15</td>
+                <td>0.09 - 0.109 or 0.151 - 0.18</td>
+                <td>&lt;0.09 or &gt;0.18</td>
+                <td>Ratio</td>
+              </tr>
+              <tr>
+                <td>Occlusal Cavity Depth</td>
+                <td>2.5 - 3.0</td>
+                <td>2.0 - 2.49 or 3.01 - 3.49</td>
+                <td>&lt;2.0 or &gt;3.5</td>
+                <td>mm</td>
+              </tr>
+              <tr>
+                <td>Surface Smoothness of Cavity Floor</td>
+                <td>0 - 10</td>
+                <td>10.01 - 40.00</td>
+                <td>&gt;40.00</td>
+                <td>µm</td>
+              </tr>
+              <tr>
+                <td>Mesial Marginal Ridge (Additional)</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Possible duplication</td>
+              </tr>
+              <tr>
+                <td>Distal Marginal Ridge (Additional)</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Possible duplication</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+    
+    
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   </body>
@@ -202,6 +324,7 @@
         const roughness = document.getElementById("roughness");
         const b_l_length_ratio = document.getElementById("b_l_length_ratio");
         const m_d_length_ratio = document.getElementById("m_d_length_ratio");
+        const score = document.getElementById("score");
 
         right_angle.innerText = data.right_angle;
         left_angle.innerText = data.left_angle;
@@ -209,6 +332,7 @@
         roughness.innerText = data.roughness;
         b_l_length_ratio.innerText = data.b_l_length_ratio;
         m_d_length_ratio.innerText = data.m_d_length_ratio;
+        score.innerText = data.score;
     }
     function deleteData() {
       const right_angle = document.getElementById("right_angle");
@@ -224,6 +348,7 @@
       roughness.innerText = "--" ;
       b_l_length_ratio.innerText = "--" ;
       m_d_length_ratio.innerText = "--" ;
+      score.innerText = "--";
     }
     document
       .getElementById("selectButton")
@@ -243,7 +368,7 @@
           .then((data) => {
             console.log("Success:", data);
             writeData(data)
-            statusValue.innerText = "Hesaplandı öğrenci notu :  ";
+            statusValue.innerText = "Hesaplandı öğrenci notu :  ",data.score;
           })
           .catch((error) => {
             statusValue.innerText = "ERRORR :  ";
