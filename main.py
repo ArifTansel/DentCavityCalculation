@@ -34,7 +34,7 @@ tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
 tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
 
 # Compute Mean Curvature using Trimesh
-mean_curvature = discrete_mean_curvature_measure_gpu(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
+mean_curvature = trimesh.curvature.discrete_mean_curvature_measure(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
 
 ### kavitenin seçilmesi 
 cavity_indices = np.where(mean_curvature < 0.4)[0]  # Select all vertices with negative curvature
@@ -89,18 +89,55 @@ o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_depth_mesh.ply", cavity_depth
 o3d.io.write_triangle_mesh(f"output/{mkdir}/tooth_dimension_cylinder_meshes.ply", tooth_dimension_cylinder_meshes)
 o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes)
 
-b_l_length_ratio = (tooth_width - cavity_width) / tooth_width 
-m_d_length_ratio = (tooth_length - cavity_length) / tooth_length 
+b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
+m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
+
+# Calculate score
+score = 0
+if cavity_width>=2.7 and cavity_width<=3.3:
+     score +=10
+elif (cavity_width<=2.69 and cavity_width>=2.5) or (cavity_width>=3.31 and cavity_width<=3.5):
+    score += 5
+elif cavity_width<2.5 or cavity_width>3.5:
+    pass
+
+if cavity_length>=7.1 and cavity_length<=8.29:
+     score +=10
+elif cavity_length>=6.6 and cavity_length<=7.00:
+    score += 5
+elif cavity_length>8.3:
+    pass
+
+if cavity_depth>=2.5 and cavity_depth<=3.0:
+     score +=10
+elif (cavity_depth<=2.49 and cavity_depth>=2.0) or (cavity_depth>=3.01 and cavity_depth<=3.39):
+    score += 5
+elif cavity_depth<2.0 or cavity_depth>3.5:
+    pass
+
+std_roughness = np.std(roughness)
+
+if std_roughness>=0 and std_roughness<=10.0:
+     score +=10
+elif std_roughness>=10.01 and std_roughness<=40.00:
+    score += 5
+elif std_roughness>40.00:
+    pass
+
+
 #Stdout to return
 #tooth_dimension_cylinder_meshes
 # JSON içerisindeki veriler (örnek değerler kullanılmaktadır)
 data = {
+    
     "right_angle": right_angle,
     "left_angle": left_angle,
     "cavity_depth": cavity_depth,
     "roughness":  np.std(roughness),
     "m_d_length_ratio" : m_d_length_ratio ,
-    "b_l_length_ratio" : b_l_length_ratio
+    "b_l_length_ratio" : b_l_length_ratio,
+    "score" : score
+    
 }
 # JSON verisini string'e dönüştürüp yazdırma api stdout olarak alacak
 print(json.dumps(data))
