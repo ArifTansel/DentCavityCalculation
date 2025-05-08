@@ -42,7 +42,6 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 
 // Current mesh holder
-let currentMesh = null;
 
 // Animation loop
 function animate() {
@@ -63,40 +62,70 @@ window.addEventListener("resize", () => {
   renderer.setSize(newWidth, newHeight);
 });
 
-// Function to load and display an STL file
-window.loadSTL = function (filename) {
+
+// Track meshes and the parent group
+let meshes = new Map();
+let modelGroup = null;
+
+// Load multiple meshes by filenames array
+window.loadSTLs = function(filenames) {
   const loader = new PLYLoader();
-  if (currentMesh) {
-    scene.remove(currentMesh);
-  }
-  console.log(filename)
   const studentName = document.getElementById("optionSelect").value;
-  loader.load(`output/${studentName}/${filename}.ply`, (geometry) => {
-    // Create material and mesh
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
+  
+  // First clear any existing meshes
+  clearMeshes();
+  
+  // Create a new group for this set of meshes
+  modelGroup = new THREE.Group();
+  scene.add(modelGroup);
+  
+  // Load each mesh
+  let loadedCount = 0;
+  filenames.forEach(filename => {
+    loader.load(`output/${studentName}/${filename}.ply`, (geometry) => {
+      // Create material and mesh
+      const material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+
+      // Add to the group and store reference in map
+      modelGroup.add(mesh);
+      meshes.set(filename, mesh);
+      
+      // Check if all meshes are loaded to center the group
+      loadedCount++;
+      if (loadedCount === filenames.length) {
+        centerGroup();
+      }
     });
-    const mesh = new THREE.Mesh(geometry, material);
-
-    // Center the model
-    // geometry.computeBoundingBox();
-    // const boundingBox = geometry.boundingBox;
-    // const center = new THREE.Vector3();
-    // boundingBox.getCenter(center);
-    // mesh.position.set(-center.x, -center.y, -center.z);
-
-    // Scale the model to fit in view
-    // const maxDim = Math.max(
-    //   boundingBox.max.x - boundingBox.min.x,
-    //   boundingBox.max.y - boundingBox.min.y,
-    //   boundingBox.max.z - boundingBox.min.z
-    // );
-    // const scaleFactor = 10 / maxDim;
-    // mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-    // Add to scene and store reference
-    scene.add(mesh);
-    currentMesh = mesh;
   });
+};
+
+// Center the entire group of meshes while maintaining their relative positions
+function centerGroup() {
+  if (!modelGroup || modelGroup.children.length === 0) return;
+  
+  // Create a bounding box for the entire group
+  const boundingBox = new THREE.Box3().setFromObject(modelGroup);
+  const center = new THREE.Vector3();
+  boundingBox.getCenter(center);
+  
+  // Move the entire group as one unit
+  modelGroup.position.set(-center.x, -center.y, -center.z);
+}
+
+// Clear all meshes and group from the scene
+window.clearMeshes = function() {
+  if (modelGroup) {
+    scene.remove(modelGroup);
+    modelGroup = null;
+  }
+  meshes.clear();
+};
+
+// For backward compatibility
+window.loadSTL = function(filename) {
+  window.loadSTLs([filename]);
 };
