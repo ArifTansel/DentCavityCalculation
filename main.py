@@ -93,62 +93,91 @@ b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
 
 # Calculate score
-is_right_angle_true = False
-is_left_angle_true = False
-is_cavity_depth_true = False
-is_roughness_true = False
-is_m_d_length_ratio_true = False
-is_b_l_length_ratio_true = False
+is_right_angle = 0
+is_left_angle = 0
+is_cavity_depth = 0
+is_roughness = 0
+is_m_d_length_ratio = 0
+is_b_l_length_ratio = 0
 score = 0
 
 #degree ye çevir
 right_angle = np.degrees(np.arccos(right_angle))
 left_angle = np.degrees(np.arccos(left_angle))
 
-if right_angle >80 :
+# Bucco-lingual length ratio grading
+if b_l_length_ratio >= 0.20 and b_l_length_ratio <= 0.35:
+    score += 10
+    is_b_l_ratio = 1
+elif (b_l_length_ratio >= 0.10 and b_l_length_ratio < 0.20) or (b_l_length_ratio > 0.35 and b_l_length_ratio <= 0.45):
     score += 5
-    is_right_angle_true = True
+    is_b_l_ratio = 0.5
+elif b_l_length_ratio < 0.10 or b_l_length_ratio > 0.45:
+    is_b_l_ratio = 0
 
-if left_angle > 80 :
+# Mesio-distal length ratio grading
+if m_d_length_ratio >= 0.20 and m_d_length_ratio <= 0.35:
+    score += 10
+    is_m_d_ratio = 1
+elif (m_d_length_ratio >= 0.10 and m_d_length_ratio < 0.20) or (m_d_length_ratio > 0.35 and m_d_length_ratio <= 0.45):
+    score += 5
+    is_m_d_ratio = 0.5
+elif m_d_length_ratio < 0.10 or m_d_length_ratio > 0.45:
+    is_m_d_ratio = 0
+
+is_right_angle = 0
+if right_angle >80 :
+    score += 10
+    is_right_angle = 1
+elif right_angle > 70 :
     score +=5
-    is_left_angle_true = True
+    is_right_angle = 0.5
+
+is_left_angle = 0
+if left_angle > 80 :
+    score +=10
+    is_left_angle = 1
+elif left_angle > 70 :
+    score +=5
+    is_left_angle = 0.5
 
 if cavity_width>=2.7 and cavity_width<=3.3:
     score +=10
-    is_right_angle_true= True
+    is_cavity_width = 1
 elif (cavity_width<=2.69 and cavity_width>=2.5) or (cavity_width>=3.31 and cavity_width<=3.5):
     score += 5
-    is_right_angle_true= True
-
+    is_cavity_width = 0.5
 elif cavity_width<2.5 or cavity_width>3.5:
-    pass
-
+    is_cavity_width = 0
+    
+is_cavity_length = 0
 if cavity_length>=7.1 and cavity_length<=8.29:
     score +=10
+    is_cavity_length = 1
 elif cavity_length>=6.6 and cavity_length<=7.00:
+    is_cavity_length = 0.5
     score += 5
-elif cavity_length>8.3:
-    pass
+
 
 if cavity_depth>=2.5 and cavity_depth<=3.0:
     score +=10
-    is_cavity_depth_true = True
+    is_cavity_depth = 1
 elif (cavity_depth<=2.49 and cavity_depth>=2.0) or (cavity_depth>=3.01 and cavity_depth<=3.39):
     score += 5
-    is_cavity_depth_true = True
+    is_cavity_depth = 0.5
 elif cavity_depth<2.0 or cavity_depth>3.5:
-    pass
+    is_cavity_depth = 0
 
 std_roughness = np.std(roughness)
 
 if std_roughness>=0 and std_roughness<=10.0:
     score +=10
-    is_roughness_true = True
+    is_roughness = 1
 elif std_roughness>=10.01 and std_roughness<=40.00:
     score += 5
-    is_roughness_true = True
+    is_roughness = 0.5
 elif std_roughness>40.00:
-    pass
+    is_roughness = 0
 
 
 #Stdout to return
@@ -157,17 +186,17 @@ elif std_roughness>40.00:
 data = {
     
     "right_angle": right_angle,
-    "is_right_angle_true" : is_right_angle_true, 
+    "is_right_angle_true" : is_right_angle, 
     "left_angle": left_angle,
-    "is_left_angle_true" : is_left_angle_true , 
+    "is_left_angle_true" : is_left_angle , 
     "cavity_depth": cavity_depth,
-    "is_cavity_depth_true" : is_cavity_depth_true ,  
+    "is_cavity_depth_true" : is_cavity_depth ,  
     "roughness":  np.std(roughness),
-    "is_roughness_true" : is_roughness_true , 
+    "is_roughness_true" : is_roughness , 
     "m_d_length_ratio" : m_d_length_ratio ,
-    "is_m_d_length_ratio_true" : is_m_d_length_ratio_true ,
+    "is_m_d_length_ratio_true" : is_m_d_length_ratio ,
     "b_l_length_ratio" : b_l_length_ratio,
-    "is_b_l_length_ratio_true" : is_b_l_length_ratio_true ,
+    "is_b_l_length_ratio_true" : is_b_l_length_ratio ,
     "score" : score
     
 }
