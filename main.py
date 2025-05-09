@@ -91,7 +91,6 @@ o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_dimension_cylinder_meshes.ply
 
 b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
-
 # Calculate score
 is_right_angle = 0
 is_left_angle = 0
@@ -198,11 +197,4 @@ data = {
     "b_l_length_ratio" : b_l_length_ratio,
     "is_b_l_length_ratio_true" : is_b_l_length_ratio ,
     "score" : score
-    
 }
-# JSON verisini string'e dönüştürüp yazdırma api stdout olarak alacak
-print(json.dumps(data))
-
-# JSON dosyasına yazma
-with open(f"output/{mkdir}/data.json", "w") as f:
-    json.dump(data, f, indent=4)
