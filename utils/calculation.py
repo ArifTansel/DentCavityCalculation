@@ -1,6 +1,14 @@
 import numpy as np
 import open3d as o3d
 import trimesh
+def calculate_oklidian_length_point(point1 , point2 ): 
+    x1 = np.asarray(point1.points)[0]
+    x2 = np.asarray(point2.points)[0]
+
+    # Öklidyen mesafe hesapla
+    distance = np.linalg.norm(x1 - x2)
+    return distance
+
 def split_side_and_get_normal_means(side_mesh):
     """
     Splits a side mesh into right and left walls and returns their mean normal vectors.

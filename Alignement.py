@@ -27,8 +27,8 @@ def trimesh_to_open3d(tri_mesh):
     return o3d_mesh
 
 # Load the STL files with Trimesh
-source_trimesh = load_with_trimesh("stlFiles/46_master_SID.LowerPrepDie30.stl")
-target_trimesh = load_with_trimesh("stlFiles/46_master_SID.LowerPrepDie30.stl")
+source_trimesh = load_with_trimesh("input/Master.stl")
+target_trimesh = load_with_trimesh("input/Master.stl")
 
 # Convert to Open3D meshes for visualization and alignment
 source_mesh = trimesh_to_open3d(source_trimesh)

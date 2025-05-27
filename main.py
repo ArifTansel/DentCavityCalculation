@@ -10,7 +10,7 @@ import json
 from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_percentage
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
 from utils import split_side_and_get_normal_means, calculate_roughness, discrete_mean_curvature_measure_gpu
-
+from utils import get_highest_point_near_mid_y,calculate_oklidian_length_point
 
 BOTTOM_THRESHOLD_PERCENTAGE=0.4
 MEAN_CURVATURE_RADİUS=2
@@ -23,15 +23,69 @@ args = parser.parse_args()
 mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.path}.stl")
 
 # Get vertices, faces, and normals
+
+# Get vertices, faces, and normals
+old_vertices = np.array(mesh_trimesh.vertices)
+old_faces = np.array(mesh_trimesh.faces)
+old_normals = np.array(mesh_trimesh.vertex_normals)
+
+old_tooth_o3d = o3d.geometry.TriangleMesh()
+old_tooth_o3d.vertices = o3d.utility.Vector3dVector(old_vertices)
+old_tooth_o3d.triangles = o3d.utility.Vector3iVector(old_faces)
+old_tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
+
+old_tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
+
+
+### Dişi üst kısmının OBB sine göre rotate et 
+num_vertices = old_vertices.shape[0]
+num_samples = int(num_vertices * 0.2)
+
+# Sort vertices by Z-coordinate (descending order)
+sorted_indices = np.argsort(old_vertices[:, 2])[::-1]  # Use `1` for Y-axis or `0` for X-axis
+top_indices = sorted_indices[:num_samples]  # Select top 10%
+
+# Extract the top points
+top_points = old_vertices[top_indices]
+
+# Create a point cloud object
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(top_points)
+
+# Oriented Bounding Box (OBB) - if you want tighter fit but possibly rotated
+obb = pcd.get_oriented_bounding_box()
+obb.color = (0, 1, 0)  # Green
+
+R = obb.R              # Rotation matrix (3x3)
+center = obb.center    # Center of OBB
+
+T_translate_to_origin = np.eye(4)
+T_translate_to_origin[:3, 3] = -center
+
+T_translate_back = np.eye(4)
+T_translate_back[:3, 3] = center
+# Create rotation matrix in 4x4
+T_rotate = np.eye(4)
+T_rotate[:3, :3] = R  # your rotation matrix
+T_final = T_translate_back @ T_rotate @ T_translate_to_origin
+
+mesh_trimesh.apply_transform(T_final)
+#rotate tooth_o3d 
+
+world_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=5.0, origin=[0, 0, 5])
+
 vertices = np.array(mesh_trimesh.vertices)
 faces = np.array(mesh_trimesh.faces)
 normals = np.array(mesh_trimesh.vertex_normals)
+
 tooth_o3d = o3d.geometry.TriangleMesh()
 tooth_o3d.vertices = o3d.utility.Vector3dVector(vertices)
 tooth_o3d.triangles = o3d.utility.Vector3iVector(faces)
 tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
 
 tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
+
+##################
 
 # Compute Mean Curvature using Trimesh
 mean_curvature = trimesh.curvature.discrete_mean_curvature_measure(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
@@ -75,6 +129,16 @@ bottom_normal_mean = np.mean(np.asarray(cavity_bottom.vertex_normals),axis=0)
 
 right_angle = np.dot(right_normal_mean, bottom_normal_mean)
 left_angle = np.dot(left_normal_mean, bottom_normal_mean)
+
+
+## calculate marginal ridge widths 
+outer_mesial_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=1) 
+cavity_mesial_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=1) 
+outer_distal_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=-1) 
+cavity_distal_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=-1) 
+
+mesial_marginal_ridge_width = calculate_oklidian_length_point(outer_mesial_point, cavity_mesial_point )
+distal_marginal_ridge_width = calculate_oklidian_length_point(outer_distal_point, cavity_distal_point )
 
 
 # export meshes to stl files
@@ -196,5 +260,17 @@ data = {
     "is_m_d_length_ratio_true" : is_m_d_length_ratio ,
     "b_l_length_ratio" : b_l_length_ratio,
     "is_b_l_length_ratio_true" : is_b_l_length_ratio ,
+    "distal_marginal_ridge_width" : distal_marginal_ridge_width ,
+    "mesial_marginal_ridge_width" : mesial_marginal_ridge_width ,
     "score" : score
 }
+
+
+print(json.dumps(data))
+
+# JSON dosyasına yazma
+with open(f"output/{mkdir}/data.json", "w") as f:
+    json.dump(data, f, indent=4)
+
+
+# info butonu ekle hesaplama şekli 

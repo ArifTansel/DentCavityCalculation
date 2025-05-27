@@ -3,6 +3,30 @@ from scipy.sparse.csgraph import connected_components
 from scipy.sparse import csr_matrix
 import open3d as o3d
 
+def get_highest_point_near_mid_y(mesh, axis,tol=1 , mesial = 1): # mesial = 1 mesial = -1
+    new_vertices = np.array(mesh.vertices)
+    num_vertices = new_vertices.shape[0]
+    num_samples = int(num_vertices * 0.05)
+
+    # Sort vertices by Z-coordinate (descending order)
+    sorted_indices = np.argsort(new_vertices[:, axis ])[::mesial]  # Use `1` for Y-axis or `0` for X-axis
+    indices = sorted_indices[:num_samples]  # Select
+
+    # Extract the top points
+    points = new_vertices[indices]
+    min_y = np.min(points[:,1])
+    max_y = np.max(points[:,1]) /1.5
+    mid_y = (min_y + max_y) / 2.0
+
+    close_to_mid_y = points[(points[:,1] >= mid_y - tol) & (points[:,1] <= mid_y + tol)]
+    
+    highest_point_idx = np.argmin(close_to_mid_y[:,2])
+    highest_point = close_to_mid_y[highest_point_idx]
+
+    # Open3D PointCloud olarak döndür
+    highest_pcd = o3d.geometry.PointCloud()
+    highest_pcd.points = o3d.utility.Vector3dVector([highest_point])
+    return highest_pcd
 ### The function that extracts the cavity from the tooth model
 ### The function that extracts the cavity bottom 
 def extract_largest_cavity(vertices, faces, cavity_indices):

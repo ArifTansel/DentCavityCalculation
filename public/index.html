@@ -179,32 +179,32 @@
           <h6 class="mb-3 text-muted">Cavity Analysis</h6>
           <table class="table table-sm table-bordered shadow-sm">
             <tbody>
-              <tr >
-                <th scope="row" >Kavite Duvarı Sağ Açısı</th>
+              <tr>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavitenin Lingual Duvarının Tabanla Yaptığı Açı, dişteki dolgu boşluğunun (kavite) dil tarafındaki iç duvarının zeminiyle birleştiği köşedir. Bu açının doğru hazırlanması, dolgunun dişe sağlam tutunması ve dayanıklı olması için kritiktir.">Lingual duvar açısı</th>
                 <td id="right_angle">--</td>
               </tr>
               <tr>
-                <th scope="row">Kavite Duvarı Sol Açısı</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavitenin Bukkal Duvarının Tabanla Yaptığı Açı, dişteki dolgu boşluğunun (kavite) yanak tarafındaki dış duvarının zeminiyle birleştiği köşedir. Bu açının doğru hazırlanması, dolgunun dişe sağlam tutunması ve çiğneme kuvvetlerine karşı dayanıklı olması için önemlidir.">Bukkal duvar açısı</th>
                 <td id="left_angle">--</td>
               </tr>
               <tr>
-                <th scope="row">Kavite Derinliği</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavitenin Okluzal Derinliği, dişin çiğneme yüzeyindeki dolgu boşluğunun (kavite) en üst noktasından tabanına kadar olan dikey mesafedir. Bu derinlik, milimetre cinsinden ölçülür ve dolgunun dayanıklılığı ile dişin sağlığı açısından büyük önem taşır.">Kavite Derinliği</th>
                 <td id="cavity_depth">--</td>
               </tr>
               <tr>
-                <th scope="row">Kavite Taban Pürüzlülüğü</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavite Tabanının Pürüzlülük Değeri, diş hekimliğinde dolgu boşluğunun (kavite) en alt yüzeyinin ne kadar düzgün veya engebeli olduğunu belirten bir ölçüdür. Bu değer, genellikle mikrometre (µm) cinsinden ifade edilir. Tabanın ideal pürüzlülüğü, dolgu materyalinin dişe maksimum tutunma sağlaması ve bakteri birikimini en aza indirmesi açısından büyük önem taşır.">Kavite Taban Pürüzlülüğü</th>
                 <td id="roughness">--</td>
               </tr>
               <tr>
-                <th scope="row">Kavite B-L Boyutu</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavitenin Bukkal-Lingual Boyut Oranı, dişteki dolgu boşluğunun (kavite) yanak tarafından (bukkal) dil tarafına (lingual) olan genişliğinin, diğer boyutlarına oranını ifade eder. Bu oran, dolgunun dişe ne kadar stabil oturacağını ve çiğneme kuvvetlerine karşı ne kadar dirençli olacağını belirlemede önemli bir faktördür.">Kavite B-L Boyutu</th>
                 <td id="b_l_length_ratio">--</td>
               </tr>
               <tr>
-                <th scope="row">Kavite M-D Boyutu</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Kavitenin Mesial-Distal Boyut Oranı, dişteki dolgu boşluğunun (kavite) dişin ön kısmına (mesial) ve arka kısmına (distal) doğru olan genişliğinin, diğer boyutlarına oranını ifade eder. Bu oran, dolgunun yerleştirileceği kavitenin stabilitesini ve çiğneme kuvvetlerine karşı direncini etkileyen önemli bir parametredir.">Kavite M-D Boyutu</th>
                 <td id="m_d_length_ratio">--</td>
               </tr>
               <tr>
-                <th scope="row">Skor</th>
+                <th scope="row" data-bs-toggle="tooltip" data-bs-placement="top" title="Toplam skor">Skor</th>
                 <td id="score">--</td>
               </tr>
             </tbody>
@@ -429,6 +429,7 @@ function changeColors(data) {
           .then((data) => {
             console.log("Success:", data);
             writeData(data);
+            changeColors(data);
             (statusValue.innerText = "Hesaplandı öğrenci notu :  "), data.score;
           })
           .catch((error) => {
