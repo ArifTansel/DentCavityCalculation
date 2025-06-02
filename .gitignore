@@ -2,3 +2,5 @@ output/
 stlFiles/
 temp/
 .conda/
+arif.session.sql
+node_modules/

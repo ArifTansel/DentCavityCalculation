@@ -15,12 +15,12 @@ def get_highest_point_near_mid_y(mesh, axis,tol=1 , mesial = 1): # mesial = 1 me
     # Extract the top points
     points = new_vertices[indices]
     min_y = np.min(points[:,1])
-    max_y = np.max(points[:,1]) /1.5
+    max_y = np.max(points[:,1]) 
     mid_y = (min_y + max_y) / 2.0
 
     close_to_mid_y = points[(points[:,1] >= mid_y - tol) & (points[:,1] <= mid_y + tol)]
     
-    highest_point_idx = np.argmin(close_to_mid_y[:,2])
+    highest_point_idx = np.argmax(close_to_mid_y[:,2])
     highest_point = close_to_mid_y[highest_point_idx]
 
     # Open3D PointCloud olarak döndür
@@ -99,6 +99,17 @@ def extract_largest_cavity(vertices, faces, cavity_indices):
     return largest_cavity_mesh, largest_cavity_indices
 
 
+
+def get_top_right_edge_midpoint_pcd(obb: o3d.geometry.OrientedBoundingBox ,x ,y ) -> o3d.geometry.PointCloud:
+    # OBB'nin köşe noktalarını al
+    box_corners = np.asarray(obb.get_box_points())
+
+    top_right_edge_midpoint = (box_corners[x] + box_corners[y]) / 2.0
+
+    # Noktayı PointCloud olarak döndür
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector([top_right_edge_midpoint])
+    return top_right_edge_midpoint
 
 
 def extract_cavity_parts(largest_cavity_mesh, bottom_threshold_percentage=0.1):

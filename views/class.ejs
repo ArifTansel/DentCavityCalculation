@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Öğrenci Dosya Yükleme</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+
+  <div class="container">
+    <h1 class="mb-4">User Search</h1>
+
+    <input type="text" id="searchInput" class="form-control" placeholder="Search by name...">
+
+    <ul class="list-group mt-3" id="resultList"></ul>
+  </div>
+  <div class="container my-4">
+    <h2 class="mb-4">Öğrenci Dosya Yükleme Tablosu</h2>
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Okul Numarası</th>
+          <th>Ad Soyad</th>
+          <th>Score</th>
+          <th>Dosya Seç</th>
+          <th>Yükle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% students.forEach(student => { %>
+          <tr>
+            <td><%= student.studentID %></td>
+            <td><%= student.studentName %> <%= student.studentLastname %></td>
+            <td>
+              <% if (student.stlFile) { %>
+                <% if (student.score !== null && student.score !== undefined) { %>
+                  <%= student.score %>
+                <% } else { %>
+                  Hesaplanmadı
+                <% } %>
+                <% } else { %>
+                  --
+                <% } %>
+            </td>
+            <% if (student.stlFile === 0 ) { %>
+              <form action="/uploadFile" method="post" enctype="multipart/form-data">
+              <td>
+                <input type="hidden" name="studentId" value=" <%= student.studentID %> ">
+                <input type="file"  name="stlFile" class="form-control form-control-sm" accept=".stl" />
+              </td>
+              <td>
+                <button class="btn btn-primary btn-sm" >Yükle</button>
+              </td>
+            </form>
+            <% } else { %>
+              <td></td>
+              <td></td>
+            <% } %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <form action="/addStudent" method="POST" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <input type="text" name="studentID" class="form-control" placeholder="Okul Numarası" required />
+        </div>
+        <div class="col-md-4">
+          <input type="text" name="studentName" class="form-control" placeholder="Ad" required />
+        </div>
+        <div class="col-md-4">
+          <input type="text" name="studentLastname" class="form-control" placeholder="Soyad" required />
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-success">Öğrenci Ekle</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</body>
+<script src="js/search.js"></script>
+
+</html>

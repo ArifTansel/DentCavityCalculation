@@ -1,6 +1,76 @@
 import numpy as np
 import open3d as o3d
 import trimesh
+from sklearn.neighbors import NearestNeighbors
+import scipy
+def find_local_maxima(points, z_threshold=0.2, k=10):
+    
+    nbrs = NearestNeighbors(n_neighbors=k + 1).fit(points)
+    _, indices = nbrs.kneighbors(points)
+
+    maxima = []
+    for i, neighbors in enumerate(indices):
+        if all(points[i][2] >= points[n][2] for n in neighbors if n != i) and points[i][2] > z_threshold:
+            maxima.append(points[i])
+    return np.array(maxima)
+
+
+
+
+def calculate_point_to_line_distance(point, line_start, line_end):
+    point = np.array(point)
+    a = np.array(line_start)
+    b = np.array(line_end)
+
+    ab = b - a
+    t = np.dot(point - a, ab) / np.dot(ab, ab)
+    t = np.clip(t, 0.0, 1.0)  # sadece doğru parçası için
+
+    closest_point = a + t * ab
+    distance = np.linalg.norm(point - closest_point)
+    
+    return distance, closest_point
+
+
+
+def compute_n_closest_vectors(set_a, set_b, n=8):
+    dists = scipy.spatial.distance.cdist(set_a, set_b)
+    flat_indices = np.argpartition(dists.flatten(), n)[:n]
+    closest_pairs = []
+
+    for idx in flat_indices:
+        i, j = np.unravel_index(idx, dists.shape)
+        pt_a, pt_b = set_a[i], set_b[j]
+        distance = np.linalg.norm(pt_a - pt_b)
+        closest_pairs.append((pt_a, pt_b, distance))
+    
+    # Sort by distance
+    return sorted(closest_pairs, key=lambda x: x[2])
+ 
+def is_within_bounds(point, bounds_min, bounds_max):
+    return np.all(point >= bounds_min) and np.all(point <= bounds_max)
+
+
+def visualize_isthmus_filtered(left_points, right_points, n_vectors=12,
+                                bounds_min=None, bounds_max=None):
+    maxima_left = find_local_maxima(left_points)
+    maxima_right = find_local_maxima(right_points)
+
+    all_pairs = compute_n_closest_vectors(maxima_left, maxima_right, n=n_vectors)
+
+    # Filter by midpoint inside bounding box
+    filtered_pairs = []
+    for start, end, dist in all_pairs:
+        midpoint = (start + end) / 2.0
+        if bounds_min is not None and bounds_max is not None:
+            if not is_within_bounds(midpoint, bounds_min, bounds_max):
+                continue
+        filtered_pairs.append((start, end, dist))
+        mesial_isthmus = filtered_pairs[0]
+        distal_isthmus = filtered_pairs[1]
+    return mesial_isthmus,distal_isthmus
+
+
 def calculate_oklidian_length_point(point1 , point2 ): 
     x1 = np.asarray(point1.points)[0]
     x2 = np.asarray(point2.points)[0]

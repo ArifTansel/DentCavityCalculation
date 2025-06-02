@@ -6,21 +6,29 @@ from sklearn.cluster import KMeans
 import os
 import argparse
 import json
-
+from utils import discrete_mean_curvature_measure_gpu
 from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_percentage
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
-from utils import split_side_and_get_normal_means, calculate_roughness, discrete_mean_curvature_measure_gpu
-from utils import get_highest_point_near_mid_y,calculate_oklidian_length_point
+from utils import split_side_and_get_normal_means, calculate_roughness ,calculate_point_to_line_distance, get_top_right_edge_midpoint_pcd
+from utils import get_highest_point_near_mid_y,calculate_oklidian_length_point 
+from utils import  find_local_maxima ,compute_n_closest_vectors , is_within_bounds ,visualize_isthmus_filtered
+import mysql.connector
 
 BOTTOM_THRESHOLD_PERCENTAGE=0.4
 MEAN_CURVATURE_RADİUS=2
+BASE_DIR = "output"
+### database infos
+HOST= "localhost"
+USER = "root"
+PASSWORD = "patatoes"
+DATABASE = "cavity_analysis_db"
 
 ### Load and compute the mean curvature
 # Load the tooth STL model using Trimesh
-parser = argparse.ArgumentParser(description="Teeth path")
-parser.add_argument("--path", type=str, help="Teeth path")
+parser = argparse.ArgumentParser(description="studentId for path")
+parser.add_argument("--studentId", type=str, help="studentId")
 args = parser.parse_args()
-mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.path}.stl")
+mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 
 # Get vertices, faces, and normals
 
@@ -58,7 +66,6 @@ obb.color = (0, 1, 0)  # Green
 
 R = obb.R              # Rotation matrix (3x3)
 center = obb.center    # Center of OBB
-
 T_translate_to_origin = np.eye(4)
 T_translate_to_origin[:3, 3] = -center
 
@@ -107,22 +114,37 @@ side_bottom, cavity_bottom = extract_cavity_parts(largest_cavity_mesh, BOTTOM_TH
 # kavite altının z eksenindeki ortalamasını al
 bottom_vertices = np.asarray(cavity_bottom.vertices)
 bottom_z_values = bottom_vertices[:, 2]
-min_z_mean = np.mean(bottom_z_values) 
+min_z = np.min(bottom_z_values) 
 
 # kavite alanının en üstü 
 max_z = np.max(cavity_vertices[:, 2])
-cavity_depth = max_z - min_z_mean  # Derinlik (Z eksenindeki fark)
+cavity_depth = max_z - min_z  # Derinlik (Z eksenindeki fark)
 
 outline_indices = np.where((mean_curvature > 3.0))[0]
 roughness = calculate_roughness(cavity_bottom)
 colored_roughness = visualize_roughness(cavity_bottom,tooth_o3d)
 
 cavity_centroid = np.mean(cavity_vertices, axis=0)
-min_z_point = [cavity_centroid[0], cavity_centroid[1], min_z_mean]
+min_z_point = [cavity_centroid[0], cavity_centroid[1], min_z]
 max_z_point = [cavity_centroid[0], cavity_centroid[1], max_z]
 cavity_depth_mesh = create_cylinder_between_points(min_z_point, max_z_point)
 
 right_mesh, left_mesh, right_normal_mean, left_normal_mean = split_side_and_get_normal_means(side_bottom)
+
+### isthmus calculation
+# bounds_min = np.array([-2.0, 2.0, 7.0])
+# bounds_max = np.array([2.8, 4.5, 7.8])
+
+# mesial_isthmus , distal_isthmus = visualize_isthmus_filtered( 
+#     np.asarray(right_mesh.vertices),
+#     np.asarray(left_mesh.vertices),
+#     n_vectors=20,
+#     # bounds_min=bounds_min,
+#     # bounds_max=bounds_max
+# )
+# mesial_isthmus_length = mesial_isthmus[2]
+# distal_isthmus_length = distal_isthmus[2]
+
 
 cavity_bottom.compute_vertex_normals()
 bottom_normal_mean = np.mean(np.asarray(cavity_bottom.vertex_normals),axis=0)
@@ -132,26 +154,71 @@ left_angle = np.dot(left_normal_mean, bottom_normal_mean)
 
 
 ## calculate marginal ridge widths 
-outer_mesial_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=1) 
-cavity_mesial_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=1) 
-outer_distal_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=-1) 
-cavity_distal_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=-1) 
+# outer_mesial_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=1) 
+# cavity_mesial_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=1) 
+# outer_distal_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=-1) 
+# cavity_distal_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=-1) 
 
-mesial_marginal_ridge_width = calculate_oklidian_length_point(outer_mesial_point, cavity_mesial_point )
-distal_marginal_ridge_width = calculate_oklidian_length_point(outer_distal_point, cavity_distal_point )
+# mesial_ridge_distance = calculate_oklidian_length_point(outer_mesial_point, cavity_mesial_point )
+# distal_ridge_distance = calculate_oklidian_length_point(outer_distal_point, cavity_distal_point )
+
+
+
+
+num_vertices = vertices.shape[0]
+start_idx  = int(num_vertices * 0.3)
+end_idx  = int(num_vertices * 0.5)
+
+# Sort vertices by Z-coordinate (descending order)
+sorted_indices = np.argsort(vertices[:, 2])[::-1]  # Use `1` for Y-axis or `0` for X-axis
+interval_indices = sorted_indices[start_idx:end_idx]  # Select top 10%
+
+# Extract the top points
+interval_points = vertices[interval_indices]
+
+# Create a point cloud object
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(interval_points)
+
+interval_obb = pcd.get_oriented_bounding_box()
+interval_obb.color = (1,0,0)
+
+cavity_obb = largest_cavity_mesh.get_oriented_bounding_box()
+cavity_obb.color = (0,0,1)
+box_corners = np.asarray(interval_obb.get_box_points()) #3,5 4,6
+
+#mesial ridge_width calculation
+mesial_line_start = box_corners[4]
+mesial_line_end = box_corners[6]
+mesial_middle_point = get_top_right_edge_midpoint_pcd(cavity_obb, 4 ,6)
+# other_middle = get_top_right_edge_midpoint_pcd(interval_obb)
+mesial_ridge_distance , mesial_ridge_closest_point= calculate_point_to_line_distance(mesial_middle_point , mesial_line_start , mesial_line_end)
+mesial_ridge_width_mesh = create_cylinder_between_points(mesial_ridge_closest_point,mesial_middle_point)
+mesial_ridge_width_mesh.paint_uniform_color([1.0, 0.0, 0.0])  
+
+#distal ridge_width calculation
+distal_line_start = box_corners[3]
+distal_line_end = box_corners[5]
+distal_middle_point = get_top_right_edge_midpoint_pcd(cavity_obb, 3 ,5)
+distal_ridge_distance , distal_ridge_closest_point= calculate_point_to_line_distance(distal_middle_point , distal_line_start , distal_line_end)
+distal_ridge_width_mesh = create_cylinder_between_points(distal_ridge_closest_point,distal_middle_point)
+distal_ridge_width_mesh.paint_uniform_color([0.0, 1.0, 0.0])  
 
 
 # export meshes to stl files
-#ALL MESHES : colored_roughness, cavity_bottom, line_set, largest_cavity_mesh, tooth_o3d  ,cylinder_mesh
-mkdir = args.path.split(".")[0]
+#ALL MESHES : colored_roughness, cavity_bottom, line_set, largest_cavity_mesh, tooth_o3d  ,cylinder_mesh ,distal_ridge_width_mesh ,mesial_ridge_width_mesh
+mkdir = args.studentId
 os.makedirs(f"output/{mkdir}",exist_ok=True)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/colored_roughness.ply", colored_roughness , write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_bottom.ply", cavity_bottom)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/largest_cavity_mesh.ply", largest_cavity_mesh)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/tooth_o3d.ply", tooth_o3d)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_depth_mesh.ply", cavity_depth_mesh)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/tooth_dimension_cylinder_meshes.ply", tooth_dimension_cylinder_meshes)
-o3d.io.write_triangle_mesh(f"output/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/colored_roughness.ply", colored_roughness , write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_bottom.ply", cavity_bottom)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/largest_cavity_mesh.ply", largest_cavity_mesh)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_o3d.ply", tooth_o3d)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_depth_mesh.ply", cavity_depth_mesh)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.ply", tooth_dimension_cylinder_meshes)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh)
+
 
 b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
@@ -162,31 +229,73 @@ is_cavity_depth = 0
 is_roughness = 0
 is_m_d_length_ratio = 0
 is_b_l_length_ratio = 0
+is_mesial_ridge_distance_true = 0
+is_distal_ridge_distance_true = 0 
+is_cavity_width = 0
+is_mesial_isthmus_length_true = 0
+is_distal_isthmus_length_true = 0
 score = 0
 
 #degree ye çevir
 right_angle = np.degrees(np.arccos(right_angle))
 left_angle = np.degrees(np.arccos(left_angle))
 
-# Bucco-lingual length ratio grading
-if b_l_length_ratio >= 0.20 and b_l_length_ratio <= 0.35:
-    score += 10
-    is_b_l_ratio = 1
-elif (b_l_length_ratio >= 0.10 and b_l_length_ratio < 0.20) or (b_l_length_ratio > 0.35 and b_l_length_ratio <= 0.45):
+# if mesial_isthmus_length >= 1.5 and mesial_isthmus_length <= 1.99: 
+#     score += 10
+#     is_mesial_isthmus_length_true = 1 
+# elif (1.0 <= mesial_isthmus_length < 1.5) or (2.01 <= mesial_isthmus_length <= 2.5):
+#     score += 5
+#     is_mesial_isthmus_length_true = 0.5 
+# elif mesial_isthmus_length < 1.0 or mesial_isthmus_length > 2.5:
+#     is_mesial_isthmus_length_true = 0
+
+
+# if distal_isthmus_length >= 1.5 and distal_isthmus_length <= 1.99: 
+#     score += 10
+#     is_distal_isthmus_length_true = 1 
+# elif (1.0 <= distal_isthmus_length < 1.5) or (2.01 <= distal_isthmus_length <= 2.5):
+#     score += 5
+#     is_distal_isthmus_length_true = 0.5 
+# elif distal_isthmus_length < 1.0 or distal_isthmus_length > 2.5:
+#     is_distal_isthmus_length_true = 0
+
+## mesial marginal
+if mesial_ridge_distance>=1.2 and mesial_ridge_distance<=1.6:
+    score +=10
+    is_mesial_ridge_distance_true = 1
+elif (mesial_ridge_distance<1.2 and mesial_ridge_distance>=1.0) or (mesial_ridge_distance>1.6 and mesial_ridge_distance<=2.0):
     score += 5
-    is_b_l_ratio = 0.5
-elif b_l_length_ratio < 0.10 or b_l_length_ratio > 0.45:
-    is_b_l_ratio = 0
+    is_mesial_ridge_distance_true = 0.5
+elif mesial_ridge_distance<1.0 or mesial_ridge_distance>2:
+    is_mesial_ridge_distance_true = 0
+## distal marginal
+if distal_ridge_distance>=1.2 and distal_ridge_distance<=1.6:
+    score +=10
+    is_distal_ridge_distance_true = 1
+elif (distal_ridge_distance<1.2 and distal_ridge_distance>=1.0) or (distal_ridge_distance>1.6 and distal_ridge_distance<=2.0):
+    score += 5
+    is_distal_ridge_distance_true = 0.5
+elif distal_ridge_distance<1.0 or distal_ridge_distance>2:
+    is_distal_ridge_distance_true = 0
+
+
+# Bucco-lingual length ratio grading
+if b_l_length_ratio >= 0.35 and b_l_length_ratio <= 0.45:
+    score += 10
+    is_b_l_length_ratio = 1
+elif (b_l_length_ratio >= 0.29 and b_l_length_ratio < 0.34):
+    score += 5
+    is_b_l_length_ratio = 0.5
+
 
 # Mesio-distal length ratio grading
-if m_d_length_ratio >= 0.20 and m_d_length_ratio <= 0.35:
+if m_d_length_ratio >= 0.65 and m_d_length_ratio <= 0.75:
     score += 10
-    is_m_d_ratio = 1
-elif (m_d_length_ratio >= 0.10 and m_d_length_ratio < 0.20) or (m_d_length_ratio > 0.35 and m_d_length_ratio <= 0.45):
+    is_m_d_length_ratio = 1
+elif m_d_length_ratio<0.65 and m_d_length_ratio>=0.6:
     score += 5
-    is_m_d_ratio = 0.5
-elif m_d_length_ratio < 0.10 or m_d_length_ratio > 0.45:
-    is_m_d_ratio = 0
+    is_m_d_length_ratio = 0.5
+
 
 is_right_angle = 0
 if right_angle >80 :
@@ -204,28 +313,28 @@ elif left_angle > 70 :
     score +=5
     is_left_angle = 0.5
 
-if cavity_width>=2.7 and cavity_width<=3.3:
-    score +=10
-    is_cavity_width = 1
-elif (cavity_width<=2.69 and cavity_width>=2.5) or (cavity_width>=3.31 and cavity_width<=3.5):
-    score += 5
-    is_cavity_width = 0.5
-elif cavity_width<2.5 or cavity_width>3.5:
-    is_cavity_width = 0
-    
-is_cavity_length = 0
-if cavity_length>=7.1 and cavity_length<=8.29:
+if cavity_length>=2.7 and cavity_length<=3.3:
     score +=10
     is_cavity_length = 1
-elif cavity_length>=6.6 and cavity_length<=7.00:
-    is_cavity_length = 0.5
+elif (cavity_length<=2.69 and cavity_length>=2.5) or (cavity_length>=3.31 and cavity_length<=3.5):
     score += 5
+    is_cavity_length = 0.5
+elif cavity_length<2.5 or cavity_length>3.5:
+    is_cavity_length = 0
 
+
+if cavity_width>=7.1 and cavity_width<=8.29:
+    score +=10
+    is_cavity_width = 1
+elif cavity_width>=6.6 and cavity_width<=7.00:
+    is_cavity_width = 0.5
+    score += 5
+    
 
 if cavity_depth>=2.5 and cavity_depth<=3.0:
     score +=10
     is_cavity_depth = 1
-elif (cavity_depth<=2.49 and cavity_depth>=2.0) or (cavity_depth>=3.01 and cavity_depth<=3.39):
+elif (cavity_depth<=2.49 and cavity_depth>=2.0) or (cavity_depth>=3.01 and cavity_depth<=3.49):
     score += 5
     is_cavity_depth = 0.5
 elif cavity_depth<2.0 or cavity_depth>3.5:
@@ -247,30 +356,218 @@ elif std_roughness>40.00:
 #tooth_dimension_cylinder_meshes
 # JSON içerisindeki veriler (örnek değerler kullanılmaktadır)
 data = {
-    
-    "right_angle": right_angle,
+    "studentId" : args.studentId , 
+    # "mesial_isthmus_length": round(mesial_isthmus_length, 3),
+    # "is_mesial_isthmus_length_true": is_mesial_isthmus_length_true,
+
+    # "distal_isthmus_length": round(distal_isthmus_length, 3),
+    # "is_distal_isthmus_length_true": is_distal_isthmus_length_true,
+
+    "right_angle": round(right_angle,3),
     "is_right_angle_true" : is_right_angle, 
-    "left_angle": left_angle,
+
+    "left_angle": round(left_angle,3),
     "is_left_angle_true" : is_left_angle , 
-    "cavity_depth": cavity_depth,
+    
+    "cavity_depth": round(cavity_depth,3),
     "is_cavity_depth_true" : is_cavity_depth ,  
-    "roughness":  np.std(roughness),
+    
+    "roughness":  round(np.std(roughness),3),
     "is_roughness_true" : is_roughness , 
-    "m_d_length_ratio" : m_d_length_ratio ,
+    
+    "m_d_length_ratio" : round(m_d_length_ratio,3) ,
     "is_m_d_length_ratio_true" : is_m_d_length_ratio ,
-    "b_l_length_ratio" : b_l_length_ratio,
+    
+    "m_d_length" : round(cavity_width,3) ,
+    "is_m_d_length_true" : is_cavity_width ,
+
+    "b_l_length_ratio" : round(b_l_length_ratio,3),
     "is_b_l_length_ratio_true" : is_b_l_length_ratio ,
-    "distal_marginal_ridge_width" : distal_marginal_ridge_width ,
-    "mesial_marginal_ridge_width" : mesial_marginal_ridge_width ,
+    
+    "b_l_length" : round(cavity_length,3),
+    "is_b_l_length_true" : is_cavity_length , 
+
+    "distal_ridge_distance" : round(distal_ridge_distance,3) ,
+    "is_distal_ridge_distance_true" : is_distal_ridge_distance_true,
+    
+    "mesial_ridge_distance" : round(mesial_ridge_distance,3) ,
+    "is_mesial_ridge_distance_true" : is_mesial_ridge_distance_true ,
+
     "score" : score
 }
-
 
 print(json.dumps(data))
 
 # JSON dosyasına yazma
 with open(f"output/{mkdir}/data.json", "w") as f:
     json.dump(data, f, indent=4)
+### database yükleme bağlanma işlemleri :
 
+
+def insert_ply_paths(studentId,base_dir = BASE_DIR):
+    """
+    student_ply_paths tablosuna bir kayıt ekler.
+    
+    :param studentID:    Öğrenci numarası (aynı zamanda mkdir adı olarak da kullanılır).
+    :param base_dir:     Ana klasör (varsayılan "output").
+    """
+    # Dosya yollarını hazırla
+    mkdir = studentId
+    colored_roughness_path              = f"{base_dir}/{mkdir}/colored_roughness.ply"
+    cavity_bottom_path                  = f"{base_dir}/{mkdir}/cavity_bottom.ply"
+    largest_cavity_mesh_path            = f"{base_dir}/{mkdir}/largest_cavity_mesh.ply"
+    tooth_o3d_path                      = f"{base_dir}/{mkdir}/tooth_o3d.ply"
+    cavity_depth_mesh_path              = f"{base_dir}/{mkdir}/cavity_depth_mesh.ply"
+    tooth_dimension_cylinder_meshes_path= f"{base_dir}/{mkdir}/tooth_dimension_cylinder_meshes.ply"
+    cavity_dimension_cylinder_meshes_path = f"{base_dir}/{mkdir}/cavity_dimension_cylinder_meshes.ply"
+    distal_ridge_width_mesh_path = f"{base_dir}/{mkdir}/distal_ridge_width_mesh.ply"
+    mesial_ridge_width_mesh_path = f"{base_dir}/{mkdir}/mesial_ridge_width_mesh.ply"
+
+    # Veritabanı bağlantısını aç
+    conn = mysql.connector.connect(
+        host=HOST,
+        user=USER,
+        password=PASSWORD,
+        database=DATABASE
+    )
+    cur = conn.cursor()
+
+    # Eğer studentID için bir UNIQUE kısıtlaman yoksa, tekrar eklemeleri önlemek için
+    # öğrenci numarasını UNIQUE yapman veya ON DUPLICATE KEY UPDATE kullanman gerekebilir.
+    insert_sql = """
+        INSERT INTO student_ply_paths (
+            studentID,
+            colored_roughness_path,
+            cavity_bottom_path,
+            largest_cavity_mesh_path,
+            tooth_o3d_path,
+            cavity_depth_mesh_path,
+            tooth_dimension_cylinder_meshes_path,
+            cavity_dimension_cylinder_meshes_path,
+            distal_ridge_width_mesh_path,
+            mesial_ridge_width_mesh_path
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+        ON DUPLICATE KEY UPDATE
+            colored_roughness_path               = VALUES(colored_roughness_path),
+            cavity_bottom_path                   = VALUES(cavity_bottom_path),
+            largest_cavity_mesh_path             = VALUES(largest_cavity_mesh_path),
+            tooth_o3d_path                       = VALUES(tooth_o3d_path),
+            cavity_depth_mesh_path               = VALUES(cavity_depth_mesh_path),
+            tooth_dimension_cylinder_meshes_path = VALUES(tooth_dimension_cylinder_meshes_path),
+            cavity_dimension_cylinder_meshes_path= VALUES(cavity_dimension_cylinder_meshes_path),
+            distal_ridge_width_mesh_path         = VALUES(distal_ridge_width_mesh_path),
+            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path);
+    """
+
+    values = (
+        studentId,
+        colored_roughness_path,
+        cavity_bottom_path,
+        largest_cavity_mesh_path,
+        tooth_o3d_path,
+        cavity_depth_mesh_path,
+        tooth_dimension_cylinder_meshes_path,
+        cavity_dimension_cylinder_meshes_path,
+        distal_ridge_width_mesh_path,
+        mesial_ridge_width_mesh_path
+    )
+
+    cur.execute(insert_sql, values)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def insert_score_data(data):
+    connection = mysql.connector.connect(
+        host=HOST,
+        user=USER,
+        password=PASSWORD,
+        database=DATABASE
+    )
+    cursor = connection.cursor()
+    insert_query = """
+    INSERT INTO cavity_scores (
+        studentId,
+        right_angle, is_right_angle_true,
+        left_angle, is_left_angle_true,
+        cavity_depth, is_cavity_depth_true,
+        roughness, is_roughness_true,
+        m_d_length_ratio, is_m_d_length_ratio_true,
+        m_d_length, is_m_d_length_true,
+        b_l_length_ratio, is_b_l_length_ratio_true,
+        b_l_length, is_b_l_length_true,
+        distal_ridge_distance, is_distal_ridge_distance_true,
+        mesial_ridge_distance, is_mesial_ridge_distance_true,
+        score
+    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        right_angle = VALUES(right_angle),
+        is_right_angle_true = VALUES(is_right_angle_true),
+        left_angle = VALUES(left_angle),
+        is_left_angle_true = VALUES(is_left_angle_true),
+        cavity_depth = VALUES(cavity_depth),
+        is_cavity_depth_true = VALUES(is_cavity_depth_true),
+        roughness = VALUES(roughness),
+        is_roughness_true = VALUES(is_roughness_true),
+        m_d_length_ratio = VALUES(m_d_length_ratio),
+        is_m_d_length_ratio_true = VALUES(is_m_d_length_ratio_true),
+        m_d_length = VALUES(m_d_length),
+        is_m_d_length_true = VALUES(is_m_d_length_true),
+        b_l_length_ratio = VALUES(b_l_length_ratio),
+        is_b_l_length_ratio_true = VALUES(is_b_l_length_ratio_true),
+        b_l_length = VALUES(b_l_length),
+        is_b_l_length_true = VALUES(is_b_l_length_true),
+        distal_ridge_distance = VALUES(distal_ridge_distance),
+        is_distal_ridge_distance_true = VALUES(is_distal_ridge_distance_true),
+        mesial_ridge_distance = VALUES(mesial_ridge_distance),
+        is_mesial_ridge_distance_true = VALUES(is_mesial_ridge_distance_true),
+        score = VALUES(score);
+    """
+    # bazı değerler numpy olarak kaldıği için database a atarken sıkıntı yaşatabiliyor.
+    clean_data = {k: float(v) if isinstance(v, np.floating) else int(v) if isinstance(v, np.integer) else v for k, v in data.items()}
+
+    values = (
+        clean_data["studentId"],
+
+        round(clean_data["right_angle"], 3),
+        clean_data["is_right_angle_true"],
+
+        round(clean_data["left_angle"], 3),
+        clean_data["is_left_angle_true"],
+
+        round(clean_data["cavity_depth"], 3),
+        clean_data["is_cavity_depth_true"],
+
+        round(clean_data["roughness"], 3),
+        clean_data["is_roughness_true"],
+
+        round(clean_data["m_d_length_ratio"], 3),
+        clean_data["is_m_d_length_ratio_true"],
+
+        round(clean_data["m_d_length"], 3),
+        clean_data["is_m_d_length_true"],
+
+        round(clean_data["b_l_length_ratio"], 3),
+        clean_data["is_b_l_length_ratio_true"],
+
+        round(clean_data["b_l_length"], 3),
+        clean_data["is_b_l_length_true"],
+
+        round(clean_data["distal_ridge_distance"], 3),
+        clean_data["is_distal_ridge_distance_true"],
+
+        round(clean_data["mesial_ridge_distance"], 3),
+        clean_data["is_mesial_ridge_distance_true"],
+
+        clean_data["score"]
+    )
+
+    cursor.execute(insert_query, values)
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+insert_ply_paths(args.studentId)
+insert_score_data(data=data)
 
 # info butonu ekle hesaplama şekli 

@@ -71,6 +71,7 @@ let modelGroup = null;
 window.loadSTLs = function(filenames) {
   const loader = new PLYLoader();
   const studentName = document.getElementById("optionSelect").value;
+  const match = studentName.match(/\((\d+)\)/);
   
   // First clear any existing meshes
   clearMeshes();
@@ -82,7 +83,7 @@ window.loadSTLs = function(filenames) {
   // Load each mesh
   let loadedCount = 0;
   filenames.forEach(filename => {
-    loader.load(`output/${studentName}/${filename}.ply`, (geometry) => {
+    loader.load(`output/${match[1]}/${filename}.ply`, (geometry) => {
       // Create material and mesh
       const material = new THREE.MeshStandardMaterial({
         vertexColors: true,

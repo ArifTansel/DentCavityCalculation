@@ -87,7 +87,15 @@
   <body>
     <div class="container">
       <!-- Top section with select dropdown and button -->
-      <div class="top-section">
+      <div class="container">
+        <h1 class="mb-4">User Search</h1>
+    
+        <input type="text" id="searchInput" class="form-control" placeholder="Search by name...">
+    
+        <ul class="list-group mt-3" id="resultList"></ul>
+      </div>
+      
+      <!-- <div class="top-section">
         <div class="input-group">
           <select class="form-select" id="optionSelect">
             <option selected>Choose an option...</option>
@@ -120,10 +128,10 @@
             <button type="submit" class="btn btn-primary">Yükle</button>
           </div>
         </form>
-      </div>
-      <div>
+      </div> -->
+      <!-- <div>
         <p id="status"></p>
-      </div>
+      </div> -->
 
       <!-- Main content area -->
       <div class="row">
@@ -469,7 +477,7 @@
     <script src="js/calculate.js"></script>
     <script src="js/fetchStudentNames.js"></script>
     <script src="js/userData.js"></script>
-
+    <script src="js/search.js"></script>
   </body>
 
   <script>
