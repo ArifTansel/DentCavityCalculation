@@ -11,8 +11,9 @@ from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_perc
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
 from utils import split_side_and_get_normal_means, calculate_roughness ,calculate_point_to_line_distance, get_top_right_edge_midpoint_pcd
 from utils import get_highest_point_near_mid_y,calculate_oklidian_length_point 
-from utils import  find_local_maxima ,compute_n_closest_vectors , is_within_bounds ,visualize_isthmus_filtered
+from utils import  find_local_maxima ,compute_n_closest_vectors , is_within_bounds ,visualize_isthmus_filtered, trim_mesh_by_percent, compute_isthmus_vectors ,sort_isthmus_pairs, visualize_mesial_distal_isthmuses
 import mysql.connector
+from sklearn.decomposition import PCA
 
 BOTTOM_THRESHOLD_PERCENTAGE=0.4
 MEAN_CURVATURE_RADİUS=2
@@ -131,19 +132,47 @@ cavity_depth_mesh = create_cylinder_between_points(min_z_point, max_z_point)
 
 right_mesh, left_mesh, right_normal_mean, left_normal_mean = split_side_and_get_normal_means(side_bottom)
 
-### isthmus calculation
-# bounds_min = np.array([-2.0, 2.0, 7.0])
-# bounds_max = np.array([2.8, 4.5, 7.8])
 
-# mesial_isthmus , distal_isthmus = visualize_isthmus_filtered( 
-#     np.asarray(right_mesh.vertices),
-#     np.asarray(left_mesh.vertices),
-#     n_vectors=20,
-#     # bounds_min=bounds_min,
-#     # bounds_max=bounds_max
-# )
-# mesial_isthmus_length = mesial_isthmus[2]
-# distal_isthmus_length = distal_isthmus[2]
+trimmed_right_mesh = trim_mesh_by_percent(right_mesh,trim_percent=0.20)
+trimmed_left_mesh = trim_mesh_by_percent(left_mesh,trim_percent=0.20)
+
+isthmus_pairs = compute_isthmus_vectors(trimmed_right_mesh, trimmed_left_mesh,num_pairs=10)
+sorted_isthmus_pairs = sort_isthmus_pairs(isthmus_pairs=isthmus_pairs)
+
+points, _ = trimesh.sample.sample_surface(mesh_trimesh, 3000)
+
+# Apply PCA to find mesial-distal orientation
+pca = PCA(n_components=3)
+pca.fit(points)
+pc1 = pca.components_[0]  # Principal axis (first component)
+
+distal_isthmus, mesial_isthmus = visualize_mesial_distal_isthmuses(sorted_isthmus_pairs, pc1, tooth_o3d)
+
+distal_isthmus_width = distal_isthmus[2]
+mesial_isthmus_width = mesial_isthmus[2]
+
+import copy
+
+my_list = []
+my_secondary_list = []
+for i in range(2):
+    for j in range(3):
+        my_secondary_list.append(mesial_isthmus[i][j])
+    my_list.append(my_secondary_list)
+    my_secondary_list = []
+mesial_isthmus_points = copy.deepcopy(my_list)
+my_list = []
+for i in range(2):
+    for j in range(3):
+        my_secondary_list.append(distal_isthmus[i][j])
+    my_list.append(my_secondary_list)
+    my_secondary_list = []
+distal_isthmus_points = copy.deepcopy(my_list)
+    
+
+
+distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1])
+mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
 
 
 cavity_bottom.compute_vertex_normals()
@@ -218,11 +247,13 @@ o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh)
-
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder)
 
 b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
-# Calculate score
+# Calculate score,
+is_cavity_length = 0
 is_right_angle = 0
 is_left_angle = 0
 is_cavity_depth = 0
@@ -232,32 +263,32 @@ is_b_l_length_ratio = 0
 is_mesial_ridge_distance_true = 0
 is_distal_ridge_distance_true = 0 
 is_cavity_width = 0
-is_mesial_isthmus_length_true = 0
-is_distal_isthmus_length_true = 0
+is_mesial_isthmus_width_true = 0
+is_distal_isthmus_width_true = 0
 score = 0
 
 #degree ye çevir
 right_angle = np.degrees(np.arccos(right_angle))
 left_angle = np.degrees(np.arccos(left_angle))
 
-# if mesial_isthmus_length >= 1.5 and mesial_isthmus_length <= 1.99: 
-#     score += 10
-#     is_mesial_isthmus_length_true = 1 
-# elif (1.0 <= mesial_isthmus_length < 1.5) or (2.01 <= mesial_isthmus_length <= 2.5):
-#     score += 5
-#     is_mesial_isthmus_length_true = 0.5 
-# elif mesial_isthmus_length < 1.0 or mesial_isthmus_length > 2.5:
-#     is_mesial_isthmus_length_true = 0
+if mesial_isthmus_width >= 1.5 and mesial_isthmus_width <= 1.99: 
+    score += 10
+    is_mesial_isthmus_width_true = 1 
+elif (1.0 <= mesial_isthmus_width < 1.5) or (2.01 <= mesial_isthmus_width <= 2.5):
+    score += 5
+    is_mesial_isthmus_width_true = 0.5 
+elif mesial_isthmus_width < 1.0 or mesial_isthmus_width > 2.5:
+    is_mesial_isthmus_width_true = 0
 
 
-# if distal_isthmus_length >= 1.5 and distal_isthmus_length <= 1.99: 
-#     score += 10
-#     is_distal_isthmus_length_true = 1 
-# elif (1.0 <= distal_isthmus_length < 1.5) or (2.01 <= distal_isthmus_length <= 2.5):
-#     score += 5
-#     is_distal_isthmus_length_true = 0.5 
-# elif distal_isthmus_length < 1.0 or distal_isthmus_length > 2.5:
-#     is_distal_isthmus_length_true = 0
+if distal_isthmus_width >= 1.5 and distal_isthmus_width <= 1.99: 
+    score += 10
+    is_distal_isthmus_width_true = 1 
+elif (1.0 <= distal_isthmus_width < 1.5) or (2.01 <= distal_isthmus_width <= 2.5):
+    score += 5
+    is_distal_isthmus_width_true = 0.5 
+elif distal_isthmus_width < 1.0 or distal_isthmus_width > 2.5:
+    is_distal_isthmus_width_true = 0
 
 ## mesial marginal
 if mesial_ridge_distance>=1.2 and mesial_ridge_distance<=1.6:
@@ -357,11 +388,11 @@ elif std_roughness>40.00:
 # JSON içerisindeki veriler (örnek değerler kullanılmaktadır)
 data = {
     "studentId" : args.studentId , 
-    # "mesial_isthmus_length": round(mesial_isthmus_length, 3),
-    # "is_mesial_isthmus_length_true": is_mesial_isthmus_length_true,
+    "mesial_isthmus_length": round(mesial_isthmus_width, 3),
+    "is_mesial_isthmus_length_true": is_mesial_isthmus_width_true,
 
-    # "distal_isthmus_length": round(distal_isthmus_length, 3),
-    # "is_distal_isthmus_length_true": is_distal_isthmus_length_true,
+    "distal_isthmus_length": round(distal_isthmus_width, 3),
+    "is_distal_isthmus_length_true": is_distal_isthmus_width_true,
 
     "right_angle": round(right_angle,3),
     "is_right_angle_true" : is_right_angle, 
@@ -422,6 +453,9 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
     cavity_dimension_cylinder_meshes_path = f"{base_dir}/{mkdir}/cavity_dimension_cylinder_meshes.ply"
     distal_ridge_width_mesh_path = f"{base_dir}/{mkdir}/distal_ridge_width_mesh.ply"
     mesial_ridge_width_mesh_path = f"{base_dir}/{mkdir}/mesial_ridge_width_mesh.ply"
+    distal_isthmus_width_mesh_path = f"{base_dir}/{mkdir}/distal_isthmus_mesh.ply"
+    mesial_isthmus_width_mesh_path = f"{base_dir}/{mkdir}/mesial_isthmus_mesh.ply"
+
 
     # Veritabanı bağlantısını aç
     conn = mysql.connector.connect(
@@ -445,8 +479,10 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
             tooth_dimension_cylinder_meshes_path,
             cavity_dimension_cylinder_meshes_path,
             distal_ridge_width_mesh_path,
-            mesial_ridge_width_mesh_path
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+            mesial_ridge_width_mesh_path,
+            distal_isthmus_width_mesh_path,
+            mesial_isthmus_width_mesh_path
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s , %s)
         ON DUPLICATE KEY UPDATE
             colored_roughness_path               = VALUES(colored_roughness_path),
             cavity_bottom_path                   = VALUES(cavity_bottom_path),
@@ -456,7 +492,9 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
             tooth_dimension_cylinder_meshes_path = VALUES(tooth_dimension_cylinder_meshes_path),
             cavity_dimension_cylinder_meshes_path= VALUES(cavity_dimension_cylinder_meshes_path),
             distal_ridge_width_mesh_path         = VALUES(distal_ridge_width_mesh_path),
-            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path);
+            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path),
+            distal_isthmus_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path),
+            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path)
     """
 
     values = (
@@ -469,7 +507,9 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
         tooth_dimension_cylinder_meshes_path,
         cavity_dimension_cylinder_meshes_path,
         distal_ridge_width_mesh_path,
-        mesial_ridge_width_mesh_path
+        mesial_ridge_width_mesh_path,
+        distal_isthmus_width_mesh_path,
+        mesial_isthmus_width_mesh_path
     )
 
     cur.execute(insert_sql, values)
@@ -498,8 +538,10 @@ def insert_score_data(data):
         b_l_length, is_b_l_length_true,
         distal_ridge_distance, is_distal_ridge_distance_true,
         mesial_ridge_distance, is_mesial_ridge_distance_true,
+        mesial_isthmus_width , is_mesial_isthmus_width_true, 
+        distal_isthmus_width , is_distal_isthmus_width_true,
         score
-    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s ,%s , %s , %s)
     ON DUPLICATE KEY UPDATE
         right_angle = VALUES(right_angle),
         is_right_angle_true = VALUES(is_right_angle_true),
@@ -521,6 +563,10 @@ def insert_score_data(data):
         is_distal_ridge_distance_true = VALUES(is_distal_ridge_distance_true),
         mesial_ridge_distance = VALUES(mesial_ridge_distance),
         is_mesial_ridge_distance_true = VALUES(is_mesial_ridge_distance_true),
+        mesial_isthmus_width = VALUES(mesial_isthmus_width),
+        is_mesial_isthmus_width_true = VALUES(is_mesial_isthmus_width_true),
+        distal_isthmus_width = VALUES(distal_isthmus_width),
+        is_distal_isthmus_width_true = VALUES(is_distal_isthmus_width_true),
         score = VALUES(score);
     """
     # bazı değerler numpy olarak kaldıği için database a atarken sıkıntı yaşatabiliyor.
@@ -559,6 +605,12 @@ def insert_score_data(data):
         round(clean_data["mesial_ridge_distance"], 3),
         clean_data["is_mesial_ridge_distance_true"],
 
+        round(clean_data["mesial_isthmus_length"], 3),
+        clean_data["is_mesial_isthmus_length_true"] , 
+
+        round(clean_data["distal_isthmus_length"], 3),
+        clean_data["is_distal_isthmus_length_true"] , 
+
         clean_data["score"]
     )
 
@@ -571,3 +623,6 @@ insert_ply_paths(args.studentId)
 insert_score_data(data=data)
 
 # info butonu ekle hesaplama şekli 
+
+#TODO dişin alignment ı 
+#TODO isthmus ve ridge gösterimini ekle arayüze 
