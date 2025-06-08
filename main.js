@@ -79,10 +79,7 @@ app.post("/api/user-file", (req, res) => {
       return res.status(500).json({ success: false, message: "Sunucu hatası" });
     }
   return res.json({result : results  })
-
   });
-  
-
 });
 
 
@@ -99,6 +96,12 @@ app.get('/class', (req, res) => {
     res.render('class', { students: results });
   });
 });
+
+app.get('/analysis', (req, res) => {
+ const studentID = req.query.studentid
+
+});
+
 
 
 
@@ -172,8 +175,8 @@ app.post('/addStudent', (req, res) => {
 
 
 
-app.get('/search', (req, res) => {
-  const q = req.query.q;
+app.post('/search', (req, res) => {
+  const q = req.body.query ; 
   if (!q) return res.json([]);
 
   const sql = "SELECT * FROM student_list WHERE studentName LIKE ?";

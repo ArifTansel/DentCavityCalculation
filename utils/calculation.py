@@ -3,6 +3,73 @@ import open3d as o3d
 import trimesh
 from sklearn.neighbors import NearestNeighbors
 import scipy
+from scipy.spatial import cKDTree
+
+def sort_isthmus_pairs(isthmus_pairs):
+    length = len(isthmus_pairs)
+    if length<=1:
+        return isthmus_pairs
+    pivot = isthmus_pairs[length//2][2]
+    left = [x for x in isthmus_pairs if x[2] < pivot]
+    mid = [x for x in isthmus_pairs if x[2] == pivot]
+    right = [x for x in isthmus_pairs if x[2] > pivot]
+    
+    return sort_isthmus_pairs(left) + mid + sort_isthmus_pairs(right) 
+
+
+def find_local_maxima_along_axis(vertices, axis=2, k=10):
+    """
+    Find local maxima points along the specified axis using KNN search.
+    """
+    
+
+    axis_vals = vertices[:, axis]
+    nbrs = NearestNeighbors(n_neighbors=k).fit(vertices)
+    _, indices = nbrs.kneighbors(vertices)
+
+    local_max_mask = []
+    for i, neighbors in enumerate(indices):
+        val = axis_vals[i]
+        neighborhood = axis_vals[neighbors]
+        if val == np.max(neighborhood):
+            local_max_mask.append(True)
+        else:
+            local_max_mask.append(False)
+    return np.where(local_max_mask)[0]
+
+
+def compute_isthmus_vectors(right_mesh, left_mesh, num_pairs=5):
+    """
+    Compute shortest distances between local maxima on right and left cavity walls.
+    """
+    right_vertices = np.asarray(right_mesh.vertices)
+    left_vertices = np.asarray(left_mesh.vertices)
+
+    # Step 1: Find local maxima points
+    right_maxima_idx = find_local_maxima_along_axis(right_vertices, axis=2, k=10)
+    left_maxima_idx = find_local_maxima_along_axis(left_vertices, axis=2, k=10)
+
+    right_maxima = right_vertices[right_maxima_idx]
+    left_maxima = left_vertices[left_maxima_idx]
+
+    # Step 2: Build KDTree for fast distance lookup
+    left_tree = cKDTree(left_maxima)
+
+    # Step 3: For each right max point, find the closest left max point
+    distances, indices = left_tree.query(right_maxima, k=1)
+    
+    # Step 4: Collect the closest pairs
+    pairs = []
+    for i, dist in enumerate(distances):
+        pairs.append((right_maxima[i], left_maxima[indices[i]], dist))
+    
+    # Step 5: Sort by distance and select N shortest (isthmus candidates)
+    pairs.sort(key=lambda x: x[2])
+    top_pairs = pairs[:num_pairs]
+
+    return top_pairs
+
+
 def find_local_maxima(points, z_threshold=0.2, k=10):
     
     nbrs = NearestNeighbors(n_neighbors=k + 1).fit(points)

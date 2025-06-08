@@ -31,8 +31,8 @@ function writeData(data) {
   m_d_length.innerText = data.m_d_length;
   distal_ridge_distance.innerText = data.distal_ridge_distance;
   mesial_ridge_distance.innerText = data.mesial_ridge_distance;
-  distal_isthmus_length.innerText = data.distal_isthmus_length;
-  mesial_isthmus_length.innerText = data.mesial_isthmus_length;
+  distal_isthmus_length.innerText = data.distal_isthmus_width;
+  mesial_isthmus_length.innerText = data.mesial_isthmus_width;
   score.innerText = data.score;
 }
 function deleteData() {
@@ -83,8 +83,8 @@ function clearColors() {
       elementId: "mesial_ridge_distance",
     },
 
-    // { dataKey: 'is_mesial_isthmus_length_true', elementId: 'mesial_isthmus_length' },
-    // { dataKey: 'is_distal_isthmus_length_true', elementId: 'distal_isthmus_length' },
+    { dataKey: 'is_mesial_isthmus_width_true', elementId: 'mesial_isthmus_length' },
+    { dataKey: 'is_distal_isthmus_width_true', elementId: 'distal_isthmus_length' },
   ];
   mappings.forEach((item) => {
     const element = document.getElementById(item.elementId).parentElement;
@@ -113,8 +113,8 @@ function changeColors(data) {
       elementId: "mesial_ridge_distance",
     },
 
-    // { dataKey: 'is_mesial_isthmus_length_true', elementId: 'mesial_isthmus_length' },
-    // { dataKey: 'is_distal_isthmus_length_true', elementId: 'distal_isthmus_length' },
+    { dataKey: 'is_mesial_isthmus_width_true', elementId: 'mesial_isthmus_length' },
+    { dataKey: 'is_distal_isthmus_width_true', elementId: 'distal_isthmus_length' },
   ];
 
   // Process each item in the mappings

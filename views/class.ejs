@@ -17,7 +17,7 @@
   </div>
   <div class="container my-4">
     <h2 class="mb-4">Öğrenci Dosya Yükleme Tablosu</h2>
-    <table class="table table-bordered align-middle">
+    <table class="table table-bordered align-middle" id="student-table">
       <thead class="table-light">
         <tr>
           <th>Okul Numarası</th>
@@ -25,19 +25,21 @@
           <th>Score</th>
           <th>Dosya Seç</th>
           <th>Yükle</th>
+          <th>Analiz Et</th>
         </tr>
       </thead>
       <tbody>
         <% students.forEach(student => { %>
           <tr>
-            <td><%= student.studentID %></td>
+            <td id="student-id"><%= student.studentID %></td>
             <td><%= student.studentName %> <%= student.studentLastname %></td>
             <td>
               <% if (student.stlFile) { %>
                 <% if (student.score !== null && student.score !== undefined) { %>
                   <%= student.score %>
                 <% } else { %>
-                  Hesaplanmadı
+                  <button class="btn btn-primary" id="calculateButton" name =<%= student.studentID %> >Hesapla</button>
+                  <p id="status" style="display: none;"></p>
                 <% } %>
                 <% } else { %>
                   --
@@ -57,7 +59,18 @@
               <td></td>
               <td></td>
             <% } %>
+            <% if (student.score !== null && student.score !== undefined) { %>
+            <td>
+              <form action="/analysis?studentid=<%= student.studentID %>" method="get">
+              <button class="btn btn-primary btn-sm">Analiz Et</button>
+              </form>
+            </form>
+            </td>
+            <% } else { %>
+              <td></td>
+            <% } %>
           </tr>
+
         <% }) %>
       </tbody>
     </table>
@@ -78,7 +91,39 @@
       </div>
     </form>
   </div>
+  <script src="js/search.js"></script>
+  <script>
+// JavaScript kısmı
+const calculateButton = document.getElementById("calculateButton");
+const statusElement = document.getElementById("status");
+
+calculateButton.addEventListener("click", function () {
+  calculateButton.style.display = "none";
+  statusElement.style.display = "inline-block"
+  statusElement.textContent = "Hesaplanıyor...";
+
+  fetch("http://localhost:3000/api/calculate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ selectedOption: calculateButton.name }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Success:", data);
+      statusElement.textContent = `${data.score}`;
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      statusElement.style.display = "none"
+      calculateButton.style.display = "inline-block";
+      calculateButton.textContent = "tekrar dene";
+
+    });
+});
+
+  </script>
 </body>
-<script src="js/search.js"></script>
 
 </html>

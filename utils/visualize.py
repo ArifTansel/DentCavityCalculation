@@ -2,6 +2,60 @@
 import open3d as o3d
 import numpy as np
 
+
+def visualize_mesial_distal_isthmuses(sorted_isthmus_pairs, pca_axis, cavity_mesh):
+    """
+    Classify isthmus lines into mesial and distal based on PCA axis projection,
+    visualize the shortest line from each group, and print their lengths.
+    
+    Args:
+        sorted_isthmus_pairs (list): List of (point1, point2, distance) tuples.
+        pca_axis (np.ndarray): The PCA axis vector for mesial-distal direction.
+        cavity_mesh (o3d.geometry.TriangleMesh): The full tooth mesh for visualization.
+    """
+
+    if not sorted_isthmus_pairs:
+        return
+
+    # Step 1: Classify by midpoint projection
+    midpoints = np.array([((p1 + p2) / 2) for p1, p2, _ in sorted_isthmus_pairs])
+    projections = midpoints @ pca_axis
+    threshold = (projections.max() + projections.min()) / 2
+
+    mesial = []
+    distal = []
+    for (p1, p2, d), proj in zip(sorted_isthmus_pairs, projections):
+        (mesial if proj >= threshold else distal).append((p1, p2, d))
+
+    # Step 2: Sort and select shortest
+    mesial.sort(key=lambda x: x[2])
+    distal.sort(key=lambda x: x[2])
+    shortest_mesial = mesial[0] if mesial else None
+    shortest_distal = distal[0] if distal else None
+
+    # Step 3: Visualize
+    geometries = [cavity_mesh]
+    def add_line(p1, p2, color):
+        line = o3d.geometry.LineSet(
+            points=o3d.utility.Vector3dVector([p1, p2]),
+            lines=o3d.utility.Vector2iVector([[0, 1]])
+        )
+        line.colors = o3d.utility.Vector3dVector([color])
+        geometries.append(line)
+
+    if shortest_mesial:
+        p1, p2, d = shortest_mesial
+        add_line(p1, p2, [0, 1, 0])  # Green
+        # print(f"Shortest Mesial Isthmus: {d:.3f} mm")
+
+    if shortest_distal:
+        p1, p2, d = shortest_distal
+        add_line(p1, p2, [1, 0.6, 0])  # Orange
+        # print(f"Shortest Distal Isthmus: {d:.3f} mm")
+        
+    return shortest_distal, shortest_mesial
+
+
 def show_mesh_dimensions_with_cylinders(mesh):
     # Mesh'in vertex'lerini al
     vertices = np.asarray(mesh.vertices)

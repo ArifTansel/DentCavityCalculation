@@ -2,6 +2,63 @@ import numpy as np
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse import csr_matrix
 import open3d as o3d
+from sklearn.neighbors import NearestNeighbors
+
+
+
+def trim_mesh_by_percent(mesh, axis=0, trim_percent=0.1):
+    """
+    Trims `trim_percent` of the mesh from both ends along the specified axis.
+    
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input side mesh (left or right).
+        axis (int): Axis index (0=x, 1=y, 2=z) along which to trim.
+        trim_percent (float): Percentage (0 < trim_percent < 0.5) to trim from each end.
+        
+    Returns:
+        o3d.geometry.TriangleMesh: The trimmed mesh.
+    """
+
+    vertices = np.asarray(mesh.vertices)
+    triangles = np.asarray(mesh.triangles)
+
+    axis_values = vertices[:, axis]
+    min_val, max_val = axis_values.min(), axis_values.max()
+    range_val = max_val - min_val
+
+    # Define trimming bounds
+    lower_bound = min_val + trim_percent * range_val
+    upper_bound = max_val - trim_percent * range_val
+
+    # Keep only vertices within bounds
+    keep_mask = (axis_values >= lower_bound) & (axis_values <= upper_bound)
+    keep_indices = np.where(keep_mask)[0]
+    keep_index_set = set(keep_indices)
+
+    # Keep triangles with all 3 vertices within kept indices
+    valid_triangles = []
+    for tri in triangles:
+        if set(tri).issubset(keep_index_set):
+            valid_triangles.append(tri)
+
+    valid_triangles = np.array(valid_triangles)
+    
+    if len(valid_triangles) == 0:
+        return None
+
+    # Remap indices to form new mesh
+    unique_indices = np.unique(valid_triangles.ravel())
+    index_map = {old: new for new, old in enumerate(unique_indices)}
+    remapped_triangles = np.vectorize(index_map.get)(valid_triangles)
+
+    trimmed_mesh = o3d.geometry.TriangleMesh()
+    trimmed_mesh.vertices = o3d.utility.Vector3dVector(vertices[unique_indices])
+    trimmed_mesh.triangles = o3d.utility.Vector3iVector(remapped_triangles)
+    trimmed_mesh.compute_vertex_normals()
+
+    return trimmed_mesh
+
+
 
 def get_highest_point_near_mid_y(mesh, axis,tol=1 , mesial = 1): # mesial = 1 mesial = -1
     new_vertices = np.array(mesh.vertices)
