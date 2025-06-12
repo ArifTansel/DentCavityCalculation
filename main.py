@@ -10,8 +10,7 @@ from utils import discrete_mean_curvature_measure_gpu
 from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_percentage
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
 from utils import split_side_and_get_normal_means, calculate_roughness ,calculate_point_to_line_distance, get_top_right_edge_midpoint_pcd
-from utils import get_highest_point_near_mid_y,calculate_oklidian_length_point 
-from utils import  find_local_maxima ,compute_n_closest_vectors , is_within_bounds ,visualize_isthmus_filtered, trim_mesh_by_percent, compute_isthmus_vectors ,sort_isthmus_pairs, visualize_mesial_distal_isthmuses
+from utils import   trim_mesh_by_percent, compute_isthmus_vectors ,sort_isthmus_pairs, visualize_mesial_distal_isthmuses
 import mysql.connector
 from sklearn.decomposition import PCA
 
@@ -31,54 +30,53 @@ parser.add_argument("--studentId", type=str, help="studentId")
 args = parser.parse_args()
 mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 
-# Get vertices, faces, and normals
 
-# Get vertices, faces, and normals
-old_vertices = np.array(mesh_trimesh.vertices)
-old_faces = np.array(mesh_trimesh.faces)
-old_normals = np.array(mesh_trimesh.vertex_normals)
+# # Get vertices, faces, and normals
+# old_vertices = np.array(mesh_trimesh.vertices)
+# old_faces = np.array(mesh_trimesh.faces)
+# old_normals = np.array(mesh_trimesh.vertex_normals)
 
-old_tooth_o3d = o3d.geometry.TriangleMesh()
-old_tooth_o3d.vertices = o3d.utility.Vector3dVector(old_vertices)
-old_tooth_o3d.triangles = o3d.utility.Vector3iVector(old_faces)
-old_tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
+# old_tooth_o3d = o3d.geometry.TriangleMesh()
+# old_tooth_o3d.vertices = o3d.utility.Vector3dVector(old_vertices)
+# old_tooth_o3d.triangles = o3d.utility.Vector3iVector(old_faces)
+# old_tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
 
-old_tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
+# old_tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
 
 
-### Dişi üst kısmının OBB sine göre rotate et 
-num_vertices = old_vertices.shape[0]
-num_samples = int(num_vertices * 0.2)
+# ### Dişi üst kısmının OBB sine göre rotate et 
+# num_vertices = old_vertices.shape[0]
+# num_samples = int(num_vertices * 0.2)
 
-# Sort vertices by Z-coordinate (descending order)
-sorted_indices = np.argsort(old_vertices[:, 2])[::-1]  # Use `1` for Y-axis or `0` for X-axis
-top_indices = sorted_indices[:num_samples]  # Select top 10%
+# # Sort vertices by Z-coordinate (descending order)
+# sorted_indices = np.argsort(old_vertices[:, 2])[::-1]  # Use `1` for Y-axis or `0` for X-axis
+# top_indices = sorted_indices[:num_samples]  # Select top 10%
 
-# Extract the top points
-top_points = old_vertices[top_indices]
+# # Extract the top points
+# top_points = old_vertices[top_indices]
 
-# Create a point cloud object
-pcd = o3d.geometry.PointCloud()
-pcd.points = o3d.utility.Vector3dVector(top_points)
+# # Create a point cloud object
+# pcd = o3d.geometry.PointCloud()
+# pcd.points = o3d.utility.Vector3dVector(top_points)
 
-# Oriented Bounding Box (OBB) - if you want tighter fit but possibly rotated
-obb = pcd.get_oriented_bounding_box()
-obb.color = (0, 1, 0)  # Green
+# # Oriented Bounding Box (OBB) - if you want tighter fit but possibly rotated
+# obb = pcd.get_oriented_bounding_box()
+# obb.color = (0, 1, 0)  # Green
 
-R = obb.R              # Rotation matrix (3x3)
-center = obb.center    # Center of OBB
-T_translate_to_origin = np.eye(4)
-T_translate_to_origin[:3, 3] = -center
+# R = obb.R              # Rotation matrix (3x3)
+# center = obb.center    # Center of OBB
+# T_translate_to_origin = np.eye(4)
+# T_translate_to_origin[:3, 3] = -center
 
-T_translate_back = np.eye(4)
-T_translate_back[:3, 3] = center
-# Create rotation matrix in 4x4
-T_rotate = np.eye(4)
-T_rotate[:3, :3] = R  # your rotation matrix
-T_final = T_translate_back @ T_rotate @ T_translate_to_origin
+# T_translate_back = np.eye(4)
+# T_translate_back[:3, 3] = center
+# # Create rotation matrix in 4x4
+# T_rotate = np.eye(4)
+# T_rotate[:3, :3] = R  # your rotation matrix
+# T_final = T_translate_back @ T_rotate @ T_translate_to_origin
 
-mesh_trimesh.apply_transform(T_final)
-#rotate tooth_o3d 
+# mesh_trimesh.apply_transform(T_final)
+# #rotate tooth_o3d 
 
 world_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=5.0, origin=[0, 0, 5])
 
@@ -123,7 +121,7 @@ cavity_depth = max_z - min_z  # Derinlik (Z eksenindeki fark)
 
 outline_indices = np.where((mean_curvature > 3.0))[0]
 roughness = calculate_roughness(cavity_bottom)
-colored_roughness = visualize_roughness(cavity_bottom,tooth_o3d)
+colored_roughness = visualize_roughness(roughness,cavity_bottom,tooth_o3d)
 
 cavity_centroid = np.mean(cavity_vertices, axis=0)
 min_z_point = [cavity_centroid[0], cavity_centroid[1], min_z]
@@ -265,6 +263,7 @@ is_distal_ridge_distance_true = 0
 is_cavity_width = 0
 is_mesial_isthmus_width_true = 0
 is_distal_isthmus_width_true = 0
+is_critical_limits_exceeded = 0
 score = 0
 
 #degree ye çevir
@@ -345,28 +344,23 @@ elif left_angle > 70 :
     is_left_angle = 0.5
 
 if cavity_length>=2.7 and cavity_length<=3.3:
-    score +=10
     is_cavity_length = 1
 elif (cavity_length<=2.69 and cavity_length>=2.5) or (cavity_length>=3.31 and cavity_length<=3.5):
-    score += 5
     is_cavity_length = 0.5
 elif cavity_length<2.5 or cavity_length>3.5:
     is_cavity_length = 0
 
 
 if cavity_width>=7.1 and cavity_width<=8.29:
-    score +=10
     is_cavity_width = 1
 elif cavity_width>=6.6 and cavity_width<=7.00:
     is_cavity_width = 0.5
-    score += 5
     
 
 if cavity_depth>=2.5 and cavity_depth<=3.0:
     score +=10
     is_cavity_depth = 1
 elif (cavity_depth<=2.49 and cavity_depth>=2.0) or (cavity_depth>=3.01 and cavity_depth<=3.49):
-    score += 5
     is_cavity_depth = 0.5
 elif cavity_depth<2.0 or cavity_depth>3.5:
     is_cavity_depth = 0
@@ -383,15 +377,22 @@ elif std_roughness>40.00:
     is_roughness = 0
 
 
+####critical 
+if cavity_length > 3.5 or cavity_width > 8.3 or cavity_depth > 3.5 :
+    score = 0
+    is_critical_limits_exceeded = 1
+    
+
+
 #Stdout to return
 #tooth_dimension_cylinder_meshes
 # JSON içerisindeki veriler (örnek değerler kullanılmaktadır)
 data = {
     "studentId" : args.studentId , 
-    "mesial_isthmus_length": round(mesial_isthmus_width, 3),
+    "mesial_isthmus_width": round(mesial_isthmus_width, 3),
     "is_mesial_isthmus_length_true": is_mesial_isthmus_width_true,
 
-    "distal_isthmus_length": round(distal_isthmus_width, 3),
+    "distal_isthmus_width": round(distal_isthmus_width, 3),
     "is_distal_isthmus_length_true": is_distal_isthmus_width_true,
 
     "right_angle": round(right_angle,3),
@@ -423,6 +424,8 @@ data = {
     
     "mesial_ridge_distance" : round(mesial_ridge_distance,3) ,
     "is_mesial_ridge_distance_true" : is_mesial_ridge_distance_true ,
+
+    "is_critical_limits_exceeded" : is_critical_limits_exceeded , 
 
     "score" : score
 }
@@ -540,6 +543,7 @@ def insert_score_data(data):
         mesial_ridge_distance, is_mesial_ridge_distance_true,
         mesial_isthmus_width , is_mesial_isthmus_width_true, 
         distal_isthmus_width , is_distal_isthmus_width_true,
+        is_critical_limits_exceeded,
         score
     ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s ,%s , %s , %s)
     ON DUPLICATE KEY UPDATE
@@ -567,6 +571,7 @@ def insert_score_data(data):
         is_mesial_isthmus_width_true = VALUES(is_mesial_isthmus_width_true),
         distal_isthmus_width = VALUES(distal_isthmus_width),
         is_distal_isthmus_width_true = VALUES(is_distal_isthmus_width_true),
+        is_critical_limits_exceeded = VALUES(is_critical_limits_exceeded)
         score = VALUES(score);
     """
     # bazı değerler numpy olarak kaldıği için database a atarken sıkıntı yaşatabiliyor.
@@ -605,12 +610,13 @@ def insert_score_data(data):
         round(clean_data["mesial_ridge_distance"], 3),
         clean_data["is_mesial_ridge_distance_true"],
 
-        round(clean_data["mesial_isthmus_length"], 3),
+        round(clean_data["mesial_isthmus_width"], 3),
         clean_data["is_mesial_isthmus_length_true"] , 
 
-        round(clean_data["distal_isthmus_length"], 3),
+        round(clean_data["distal_isthmus_width"], 3),
         clean_data["is_distal_isthmus_length_true"] , 
 
+        clean_data["is_critical_limits_exceeded"],
         clean_data["score"]
     )
 
@@ -622,7 +628,13 @@ def insert_score_data(data):
 insert_ply_paths(args.studentId)
 insert_score_data(data=data)
 
-# info butonu ekle hesaplama şekli 
+#TODO cuvature fonksiyonun GPU ya taşınması
 
+#TODO farklı dişler için de yap yaklaşık 7-8 tane yap 
+#TODO elenecek 3 şey critical | database DONE | önyüz  
+
+# info butonu ekle hesaplama şekli 
+#TODO PDF 
 #TODO dişin alignment ı 
-#TODO isthmus ve ridge gösterimini ekle arayüze 
+
+#TODO isthmus ve ridge gösterimini ekle arayüze (done)

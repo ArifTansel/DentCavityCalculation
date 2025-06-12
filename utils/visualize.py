@@ -122,7 +122,7 @@ def show_mesh_dimensions_with_cylinders(mesh):
     # o3d.visualization.draw_geometries([result,mesh])
     return result , width, length
 
-def visualize_roughness(cavity_bottom, full_tooth_mesh):
+def visualize_roughness(roughness,cavity_bottom, full_tooth_mesh):
     # Cavity'den hesaplama yap
     cavity_vertices = np.asarray(cavity_bottom.vertices)
     z_values = cavity_vertices[:, 2]

@@ -38,8 +38,8 @@
                 <% if (student.score !== null && student.score !== undefined) { %>
                   <%= student.score %>
                 <% } else { %>
-                  <button class="btn btn-primary" id="calculateButton" name =<%= student.studentID %> >Hesapla</button>
-                  <p id="status" style="display: none;"></p>
+                  <button class="btn btn-primary" id=<%= student.studentID %>  name="calculateButton" >Hesapla</button>
+                  <p name="calculateStatus"  id=<%= student.studentID %> style="display: none;"></p>
                 <% } %>
                 <% } else { %>
                   --
@@ -94,33 +94,50 @@
   <script src="js/search.js"></script>
   <script>
 // JavaScript kısmı
-const calculateButton = document.getElementById("calculateButton");
-const statusElement = document.getElementById("status");
+const calculateButton = document.getElementsByName("calculateButton");
+const statusElements = document.getElementsByName("calculateStatus");
 
-calculateButton.addEventListener("click", function () {
-  calculateButton.style.display = "none";
-  statusElement.style.display = "inline-block"
-  statusElement.textContent = "Hesaplanıyor...";
+calculateButton.forEach(element => {
+  element.addEventListener("click", function () {
+  const selectedID = element.id 
+  element.style.display = "none";
+  
+  statusElements.forEach(statusElement => {
+    if (statusElement.id == selectedID) {
+    statusElement.style.display = "inline-block";
+    statusElement.textContent = "Hesaplanıyor...";
+    }
+  });
 
   fetch("http://localhost:3000/api/calculate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ selectedOption: calculateButton.name }),
+    body: JSON.stringify({ selectedOption: selectedID }),
   })
     .then((response) => response.json())
     .then((data) => {
       console.log("Success:", data);
-      statusElement.textContent = `${data.score}`;
+      statusElements.forEach(statusElement => {
+        if (statusElement.id == selectedID) {
+        statusElement.textContent = `${data.score}`;
+        }
+      });
     })
     .catch((error) => {
       console.error("Error:", error);
-      statusElement.style.display = "none"
-      calculateButton.style.display = "inline-block";
-      calculateButton.textContent = "tekrar dene";
+      statusElements.forEach(statusElement => {
+        if (statusElement.id == selectedID) {
+    statusElement.style.display = "none";
+      }      
+      });
+      element.style.display = "inline-block";
+      element.textContent = "tekrar dene";
 
     });
+  });
+  
 });
 
   </script>

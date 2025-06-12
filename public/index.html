@@ -144,11 +144,11 @@
               Master Diş
             </button>
             <button
-              class="btn btn-outline-success btn-custom"
+              class="btn btn-outline-warning btn-custom"
               id="button3"
               onclick='loadSTL("colored_roughness")'
             >
-              Pürüzlülük
+              Kavite Taban Pürüzlülüğü
             </button>
             <button
               class="btn btn-outline-warning btn-custom"
@@ -165,6 +165,18 @@
               Diş Genişliği ve Uzunluğu
             </button>
 
+            <button
+              class="btn btn-outline-warning btn-custom"
+              onclick='loadSTLs(["distal_isthmus_mesh","mesial_isthmus_mesh","tooth_o3d"]);'
+            >
+              Mesial Ve Distal Isthmus Uzunlukları
+            </button>
+            <button
+              class="btn btn-outline-warning btn-custom"
+              onclick='loadSTLs(["distal_ridge_width_mesh","mesial_ridge_width_mesh","tooth_o3d"]);'
+            >
+              Mesial Ve Distal Ridge Uzunlukları
+            </button>
             <button
               class="btn btn-outline-warning btn-custom"
               onclick='loadSTLs(["cavity_dimension_cylinder_meshes","tooth_o3d"]);'
@@ -248,7 +260,7 @@
                 </th>
                 <td id="b_l_length_ratio">--</td>
               </tr>
-              <tr>
+              <!-- <tr>
                 <th
                   scope="row"
                   data-bs-toggle="tooltip"
@@ -258,7 +270,7 @@
                   Kavite B-L Boyutu
                 </th>
                 <td id="b_l_length">--</td>
-              </tr>
+              </tr> -->
               <tr>
                 <th
                   scope="row"
@@ -270,7 +282,7 @@
                 </th>
                 <td id="m_d_length_ratio">--</td>
               </tr>
-              <tr>
+              <!-- <tr>
                 <th
                   scope="row"
                   data-bs-toggle="tooltip"
@@ -280,7 +292,7 @@
                   Kavite M-D Boyutu
                 </th>
                 <td id="m_d_length">--</td>
-              </tr>
+              </tr> -->
               <tr>
                 <th
                   scope="row"
@@ -469,11 +481,9 @@
     <script src="js/calculate.js"></script>
     <script src="js/fetchStudentNames.js"></script>
     <script src="js/userData.js"></script>
-
   </body>
 
   <script>
     // ogrenci secimi ogrencinin dosyası var mı kontrol ettir
-
   </script>
 </html>

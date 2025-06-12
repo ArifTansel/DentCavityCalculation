@@ -4,9 +4,9 @@ function writeData(data) {
   const cavity_depth = document.getElementById("cavity_depth");
   const roughness = document.getElementById("roughness");
   const b_l_length_ratio = document.getElementById("b_l_length_ratio");
-  const b_l_length = document.getElementById("b_l_length");
+  // const b_l_length = document.getElementById("b_l_length");
   const m_d_length_ratio = document.getElementById("m_d_length_ratio");
-  const m_d_length = document.getElementById("m_d_length");
+  // const m_d_length = document.getElementById("m_d_length");
   const distal_ridge_distance = document.getElementById(
     "distal_ridge_distance"
   );
@@ -26,9 +26,9 @@ function writeData(data) {
   cavity_depth.innerText = data.cavity_depth + " mm";
   roughness.innerText = data.roughness;
   b_l_length_ratio.innerText = data.b_l_length_ratio;
-  b_l_length.innerText = data.b_l_length;
+  // b_l_length.innerText = data.b_l_length;
   m_d_length_ratio.innerText = data.m_d_length_ratio;
-  m_d_length.innerText = data.m_d_length;
+  // m_d_length.innerText = data.m_d_length;
   distal_ridge_distance.innerText = data.distal_ridge_distance;
   mesial_ridge_distance.innerText = data.mesial_ridge_distance;
   distal_isthmus_length.innerText = data.distal_isthmus_width;
@@ -49,11 +49,11 @@ function deleteData() {
     "mesial_ridge_distance"
   );
   const score = document.getElementById("score");
-  const m_d_length = document.getElementById("m_d_length");
-  const b_l_length = document.getElementById("b_l_length");
+  // const m_d_length = document.getElementById("m_d_length");
+  // const b_l_length = document.getElementById("b_l_length");
 
-  m_d_length.innerText = "--";
-  b_l_length.innerText = "--";
+  // m_d_length.innerText = "--";
+  // b_l_length.innerText = "--";
   right_angle.innerText = "--";
   left_angle.innerText = "--";
   cavity_depth.innerText = "--";
@@ -71,9 +71,9 @@ function clearColors() {
     { dataKey: "is_cavity_depth_true", elementId: "cavity_depth" },
     { dataKey: "is_roughness_true", elementId: "roughness" },
     { dataKey: "is_m_d_length_ratio_true", elementId: "m_d_length_ratio" },
-    { dataKey: "is_m_d_length_true", elementId: "m_d_length" },
+    // { dataKey: "is_m_d_length_true", elementId: "m_d_length" },
     { dataKey: "is_b_l_length_ratio_true", elementId: "b_l_length_ratio" },
-    { dataKey: "is_b_l_length_true", elementId: "b_l_length" },
+    // { dataKey: "is_b_l_length_true", elementId: "b_l_length" },
     {
       dataKey: "is_distal_ridge_distance_true",
       elementId: "distal_ridge_distance",
@@ -101,9 +101,9 @@ function changeColors(data) {
     { dataKey: "is_cavity_depth_true", elementId: "cavity_depth" },
     { dataKey: "is_roughness_true", elementId: "roughness" },
     { dataKey: "is_m_d_length_ratio_true", elementId: "m_d_length_ratio" },
-    { dataKey: "is_m_d_length_true", elementId: "m_d_length" },
+    // { dataKey: "is_m_d_length_true", elementId: "m_d_length" },
     { dataKey: "is_b_l_length_ratio_true", elementId: "b_l_length_ratio" },
-    { dataKey: "is_b_l_length_true", elementId: "b_l_length" },
+    // { dataKey: "is_b_l_length_true", elementId: "b_l_length" },
     {
       dataKey: "is_distal_ridge_distance_true",
       elementId: "distal_ridge_distance",
