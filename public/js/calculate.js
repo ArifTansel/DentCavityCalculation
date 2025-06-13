@@ -19,6 +19,7 @@ function writeData(data) {
   const mesial_isthmus_length = document.getElementById(
     "mesial_isthmus_length"
   );
+  const criticalWarning = document.getElementById("criticalWarning")
   const score = document.getElementById("score");
 
   right_angle.innerText = data.right_angle;
@@ -34,6 +35,10 @@ function writeData(data) {
   distal_isthmus_length.innerText = data.distal_isthmus_width;
   mesial_isthmus_length.innerText = data.mesial_isthmus_width;
   score.innerText = data.score;
+  if (data.is_critical_limits_exceeded) {
+    criticalWarning.innerText = "Kavite M-D boyutu, Kavite B-L boyutu, Kavite Derinliği eşik değeri aşıldığı için kaldınız!!!"
+    criticalWarning.style.display = "inline-block"
+  }
 }
 function deleteData() {
   const right_angle = document.getElementById("right_angle");
@@ -63,6 +68,7 @@ function deleteData() {
   distal_ridge_distance.innerText = "--";
   mesial_ridge_distance.innerText = "--";
   score.innerText = "--";
+  criticalWarning.style.display = "none"
 }
 function clearColors() {
   const mappings = [

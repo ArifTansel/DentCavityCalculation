@@ -144,6 +144,13 @@
               Master Diş
             </button>
             <button
+              class="btn btn-outline-info btn-custom"
+              id="button2"
+              onclick='loadSTL("mesh_aligned")'
+            >
+              Master Ve Öğrenci Dişin Karşılaştırılması
+            </button>
+            <button
               class="btn btn-outline-warning btn-custom"
               id="button3"
               onclick='loadSTL("colored_roughness")'
@@ -350,6 +357,9 @@
               </tr>
             </tbody>
           </table>
+          <div class="alert alert-warning" role="alert" id="criticalWarning" style="display: none;">
+          </div>
+          
         </div>
 
         <!-- Right: Grading Criteria Table -->

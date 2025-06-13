@@ -22,6 +22,8 @@ HOST= "localhost"
 USER = "root"
 PASSWORD = "patatoes"
 DATABASE = "cavity_analysis_db"
+#TODO Z up a göre çalııyor düzelt Y-up yap onu 
+
 
 ### Load and compute the mean curvature
 # Load the tooth STL model using Trimesh
@@ -30,6 +32,53 @@ parser.add_argument("--studentId", type=str, help="studentId")
 args = parser.parse_args()
 mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 
+# X ekseni etrafında -90 derece (radyan cinsinden -π/2) döndürme matrisi
+angle_rad = np.pi / 2
+rotation_matrix = trimesh.transformations.rotation_matrix(
+    angle_rad, [1, 0, 0], point=mesh_trimesh.centroid  # mesh merkezinden döndür
+)
+
+# Mesh'i döndür
+mesh_trimesh.apply_transform(rotation_matrix)
+#################TODO utils içerisinde bir FONKSİYONA AL
+    
+mesh_source = o3d.io.read_triangle_mesh("input/Master.stl")
+mesh_aligned = o3d.io.read_triangle_mesh(f"StudentTeeth/{args.studentId}.stl")
+
+pcd_source = mesh_source.sample_points_uniformly(50000)
+pcd_target = mesh_aligned.sample_points_uniformly(50000)
+
+
+pcd_source.estimate_normals()
+pcd_target.estimate_normals()
+
+# Align using ICP (Point-to-Plane)
+reg = o3d.pipelines.registration.registration_icp(
+    pcd_source, pcd_target, 1.5, np.eye(4),
+    o3d.pipelines.registration.TransformationEstimationPointToPlane()
+)
+
+# Apply transformation to source mesh
+mesh_source.transform(reg.transformation)
+
+# Color code the source mesh based on distance
+target_pcd = mesh_aligned.sample_points_uniformly(100000)
+kdtree = o3d.geometry.KDTreeFlann(target_pcd)
+distances = [np.sqrt(kdtree.search_knn_vector_3d(v, 1)[2][0]) for v in mesh_source.vertices]
+distances = np.array(distances)
+
+# Binary red/green coloring
+threshold = 0.12
+colors = np.zeros((len(distances), 3))
+colors[distances < threshold] = [0, 1, 0]
+colors[distances >= threshold] = [1, 0, 0]
+mesh_source.vertex_colors = o3d.utility.Vector3dVector(colors)
+
+# Critical: Compute normals to enable shading
+mesh_source.compute_vertex_normals()
+mesh_aligned.paint_uniform_color([0.7, 0.7, 0.7])
+mesh_aligned.compute_vertex_normals()
+################# FONKSİYONA AL
 
 # # Get vertices, faces, and normals
 # old_vertices = np.array(mesh_trimesh.vertices)
@@ -78,7 +127,6 @@ mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 # mesh_trimesh.apply_transform(T_final)
 # #rotate tooth_o3d 
 
-world_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=5.0, origin=[0, 0, 5])
 
 vertices = np.array(mesh_trimesh.vertices)
 faces = np.array(mesh_trimesh.faces)
@@ -169,7 +217,7 @@ distal_isthmus_points = copy.deepcopy(my_list)
     
 
 
-distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1])
+distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
 mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
 
 
@@ -237,16 +285,18 @@ distal_ridge_width_mesh.paint_uniform_color([0.0, 1.0, 0.0])
 mkdir = args.studentId
 os.makedirs(f"output/{mkdir}",exist_ok=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/colored_roughness.ply", colored_roughness , write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_bottom.ply", cavity_bottom)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/largest_cavity_mesh.ply", largest_cavity_mesh)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_o3d.ply", tooth_o3d)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_depth_mesh.ply", cavity_depth_mesh)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.ply", tooth_dimension_cylinder_meshes)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_bottom.ply", cavity_bottom ,  write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/largest_cavity_mesh.ply",  largest_cavity_mesh ,  write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_o3d.ply", tooth_o3d , write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_depth_mesh.ply", cavity_depth_mesh , write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.ply", tooth_dimension_cylinder_meshes , write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes,  write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh , write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh,  write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesh_aligned.ply", mesh_source , write_vertex_colors = True )
+
 
 b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
@@ -458,7 +508,7 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
     mesial_ridge_width_mesh_path = f"{base_dir}/{mkdir}/mesial_ridge_width_mesh.ply"
     distal_isthmus_width_mesh_path = f"{base_dir}/{mkdir}/distal_isthmus_mesh.ply"
     mesial_isthmus_width_mesh_path = f"{base_dir}/{mkdir}/mesial_isthmus_mesh.ply"
-
+    mesh_aligned_path = f"{BASE_DIR}/{mkdir}/mesh_aligned.ply"
 
     # Veritabanı bağlantısını aç
     conn = mysql.connector.connect(
@@ -484,8 +534,9 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
             distal_ridge_width_mesh_path,
             mesial_ridge_width_mesh_path,
             distal_isthmus_width_mesh_path,
-            mesial_isthmus_width_mesh_path
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s , %s)
+            mesial_isthmus_width_mesh_path,
+            mesh_aligned_path
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s , %s , %s)
         ON DUPLICATE KEY UPDATE
             colored_roughness_path               = VALUES(colored_roughness_path),
             cavity_bottom_path                   = VALUES(cavity_bottom_path),
@@ -496,8 +547,9 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
             cavity_dimension_cylinder_meshes_path= VALUES(cavity_dimension_cylinder_meshes_path),
             distal_ridge_width_mesh_path         = VALUES(distal_ridge_width_mesh_path),
             mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path),
-            distal_isthmus_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path),
-            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path)
+            distal_isthmus_width_mesh_path       = VALUES(mesial_ridge_width_mesh_path),
+            mesial_ridge_width_mesh_path         = VALUES(mesial_ridge_width_mesh_path),
+            mesh_aligned_path                    = VALUES(mesh_aligned_path)
     """
 
     values = (
@@ -512,7 +564,8 @@ def insert_ply_paths(studentId,base_dir = BASE_DIR):
         distal_ridge_width_mesh_path,
         mesial_ridge_width_mesh_path,
         distal_isthmus_width_mesh_path,
-        mesial_isthmus_width_mesh_path
+        mesial_isthmus_width_mesh_path,
+        mesh_aligned_path
     )
 
     cur.execute(insert_sql, values)
@@ -545,7 +598,7 @@ def insert_score_data(data):
         distal_isthmus_width , is_distal_isthmus_width_true,
         is_critical_limits_exceeded,
         score
-    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s ,%s , %s , %s)
+    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s , %s ,%s , %s , %s , %s)
     ON DUPLICATE KEY UPDATE
         right_angle = VALUES(right_angle),
         is_right_angle_true = VALUES(is_right_angle_true),
@@ -571,7 +624,7 @@ def insert_score_data(data):
         is_mesial_isthmus_width_true = VALUES(is_mesial_isthmus_width_true),
         distal_isthmus_width = VALUES(distal_isthmus_width),
         is_distal_isthmus_width_true = VALUES(is_distal_isthmus_width_true),
-        is_critical_limits_exceeded = VALUES(is_critical_limits_exceeded)
+        is_critical_limits_exceeded = VALUES(is_critical_limits_exceeded),
         score = VALUES(score);
     """
     # bazı değerler numpy olarak kaldıği için database a atarken sıkıntı yaşatabiliyor.

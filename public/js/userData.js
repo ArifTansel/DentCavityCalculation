@@ -3,7 +3,6 @@ document.getElementById("optionSelect").addEventListener("change", function () {
   const selectedValue = this.value;
   const match = selectedValue.match(/\((\d+)\)/);
   const fileUpload = document.getElementById("fileUpload");
-
   // Seçim "Choose an option..." ise işlem yapma
   if (selectedValue === "Choose an option...") return;
   const statusValue = document.getElementById("status");
