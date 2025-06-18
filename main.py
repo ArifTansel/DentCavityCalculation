@@ -6,11 +6,11 @@ from sklearn.cluster import KMeans
 import os
 import argparse
 import json
-from utils import discrete_mean_curvature_measure_gpu
+from utils import discrete_mean_curvature_measure_gpu #TODO
 from utils import extract_largest_cavity, extract_cavity_parts ,extract_top_percentage
 from utils import show_mesh_dimensions_with_cylinders, visualize_roughness, create_cylinder_between_points
 from utils import split_side_and_get_normal_means, calculate_roughness ,calculate_point_to_line_distance, get_top_right_edge_midpoint_pcd
-from utils import   trim_mesh_by_percent, compute_isthmus_vectors ,sort_isthmus_pairs, visualize_mesial_distal_isthmuses
+from utils import trim_mesh_by_percent, compute_isthmus_vectors ,sort_isthmus_pairs, calculate_mesial_distal_isthmuses
 import mysql.connector
 from sklearn.decomposition import PCA
 
@@ -40,47 +40,16 @@ rotation_matrix = trimesh.transformations.rotation_matrix(
 
 # Mesh'i döndür
 mesh_trimesh.apply_transform(rotation_matrix)
-#################TODO utils içerisinde bir FONKSİYONA AL
-    
-mesh_source = o3d.io.read_triangle_mesh("input/Master.stl")
-mesh_aligned = o3d.io.read_triangle_mesh(f"StudentTeeth/{args.studentId}.stl")
 
-pcd_source = mesh_source.sample_points_uniformly(50000)
-pcd_target = mesh_aligned.sample_points_uniformly(50000)
+z_max = mesh_trimesh.bounds[1][2]
+threshold = z_max - 10.0  # Üstten 10 mm
 
+# Her yüzeyin tüm noktaları eşikten büyük mü?
+face_mask = np.all(mesh_trimesh.vertices[mesh_trimesh.faces][:, :, 2] >= threshold, axis=1)
 
-pcd_source.estimate_normals()
-pcd_target.estimate_normals()
+# Yeni mesh oluştur (sadece filtrelenmiş yüzeylerle)
+mesh_trimesh = mesh_trimesh.submesh([face_mask], append=True)
 
-# Align using ICP (Point-to-Plane)
-reg = o3d.pipelines.registration.registration_icp(
-    pcd_source, pcd_target, 1.5, np.eye(4),
-    o3d.pipelines.registration.TransformationEstimationPointToPlane()
-)
-
-# Apply transformation to source mesh
-mesh_source.transform(reg.transformation)
-
-# Color code the source mesh based on distance
-target_pcd = mesh_aligned.sample_points_uniformly(100000)
-kdtree = o3d.geometry.KDTreeFlann(target_pcd)
-distances = [np.sqrt(kdtree.search_knn_vector_3d(v, 1)[2][0]) for v in mesh_source.vertices]
-distances = np.array(distances)
-
-# Binary red/green coloring
-threshold = 0.12
-colors = np.zeros((len(distances), 3))
-colors[distances < threshold] = [0, 1, 0]
-colors[distances >= threshold] = [1, 0, 0]
-mesh_source.vertex_colors = o3d.utility.Vector3dVector(colors)
-
-# Critical: Compute normals to enable shading
-mesh_source.compute_vertex_normals()
-mesh_aligned.paint_uniform_color([0.7, 0.7, 0.7])
-mesh_aligned.compute_vertex_normals()
-################# FONKSİYONA AL
-
-# # Get vertices, faces, and normals
 # old_vertices = np.array(mesh_trimesh.vertices)
 # old_faces = np.array(mesh_trimesh.faces)
 # old_normals = np.array(mesh_trimesh.vertex_normals)
@@ -126,6 +95,45 @@ mesh_aligned.compute_vertex_normals()
 
 # mesh_trimesh.apply_transform(T_final)
 # #rotate tooth_o3d 
+#################TODO utils içerisinde bir FONKSİYONA AL
+    
+mesh_source = o3d.io.read_triangle_mesh("input/Master.stl")
+mesh_aligned = o3d.io.read_triangle_mesh(f"StudentTeeth/{args.studentId}.stl")
+
+pcd_source = mesh_source.sample_points_uniformly(50000)
+pcd_target = mesh_aligned.sample_points_uniformly(50000)
+
+
+pcd_source.estimate_normals()
+pcd_target.estimate_normals()
+
+# Align using ICP (Point-to-Plane)
+reg = o3d.pipelines.registration.registration_icp(
+    pcd_source, pcd_target, 1.5, np.eye(4),
+    o3d.pipelines.registration.TransformationEstimationPointToPlane()
+)
+
+# Apply transformation to source mesh
+mesh_source.transform(reg.transformation)
+
+# Color code the source mesh based on distance
+target_pcd = mesh_aligned.sample_points_uniformly(100000)
+kdtree = o3d.geometry.KDTreeFlann(target_pcd)
+distances = [np.sqrt(kdtree.search_knn_vector_3d(v, 1)[2][0]) for v in mesh_source.vertices]
+distances = np.array(distances)
+
+# Binary red/green coloring
+threshold = 0.12
+colors = np.zeros((len(distances), 3))
+colors[distances < threshold] = [0, 1, 0]
+colors[distances >= threshold] = [1, 0, 0]
+mesh_source.vertex_colors = o3d.utility.Vector3dVector(colors)
+
+# Critical: Compute normals to enable shading
+mesh_source.compute_vertex_normals()
+mesh_aligned.paint_uniform_color([0.7, 0.7, 0.7])
+mesh_aligned.compute_vertex_normals()
+################# FONKSİYONA AL
 
 
 vertices = np.array(mesh_trimesh.vertices)
@@ -192,7 +200,7 @@ pca = PCA(n_components=3)
 pca.fit(points)
 pc1 = pca.components_[0]  # Principal axis (first component)
 
-distal_isthmus, mesial_isthmus = visualize_mesial_distal_isthmuses(sorted_isthmus_pairs, pc1, tooth_o3d)
+distal_isthmus, mesial_isthmus = calculate_mesial_distal_isthmuses(sorted_isthmus_pairs, pc1, tooth_o3d)
 
 distal_isthmus_width = distal_isthmus[2]
 mesial_isthmus_width = mesial_isthmus[2]
@@ -217,8 +225,8 @@ distal_isthmus_points = copy.deepcopy(my_list)
     
 
 
-distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
-mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
+# distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
+# mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
 
 
 cavity_bottom.compute_vertex_normals()
@@ -293,8 +301,8 @@ o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes,  write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh , write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh,  write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
+# o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
+# o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesh_aligned.ply", mesh_source , write_vertex_colors = True )
 
 
@@ -427,11 +435,6 @@ elif std_roughness>40.00:
     is_roughness = 0
 
 
-####critical 
-if cavity_length > 3.5 or cavity_width > 8.3 or cavity_depth > 3.5 :
-    score = 0
-    is_critical_limits_exceeded = 1
-    
 
 
 #Stdout to return
@@ -691,3 +694,17 @@ insert_score_data(data=data)
 #TODO dişin alignment ı 
 
 #TODO isthmus ve ridge gösterimini ekle arayüze (done)
+
+
+
+
+
+
+#TODO axislere göre düzgün bir şekilde yerleştirilmesini yap
+
+#TODO nokta sayısını azaltmak başarı oranını karşılaştır eğer azaltmıyorsa 
+#TODO ISTHMUS çok fazla kez hata veriyor kontrol et
+# TODO ridgeWithler yanlış yerleri seçebiliyor
+#TODO  
+
+

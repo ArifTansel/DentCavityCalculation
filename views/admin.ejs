@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Score Threshold Entry</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <div class="card shadow p-4">
+    <h3 class="mb-4">Enter Score Threshold</h3>
+    <form method="POST" action="/save_threshold">
+
+      <div class="mb-3">
+        <label for="metric_name" class="form-label">Metric</label>
+        <select class="form-select" id="metric_name" name="metric_name" required>
+          <option value="">Select Metric</option>
+          <% metricOptions.forEach(opt => { %>
+            <option value="<%= opt %>"><%= opt %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="score_level" class="form-label">Score Level</label>
+        <select class="form-select" id="score_level" name="score_level" required>
+          <option value="">Select Score</option>
+          <option value="10">10</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="min_value" class="form-label">Min Value</label>
+        <input type="number" step="0.01" class="form-control" id="min_value" name="min_value" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="max_value" class="form-label">Max Value</label>
+        <input type="number" step="0.01" class="form-control" id="max_value" name="max_value" required>
+      </div>
+
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="critical" id="critical">
+        <label class="form-check-label" for="critical">
+          Mark as Critical
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

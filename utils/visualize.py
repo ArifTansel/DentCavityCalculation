@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 
 
-def visualize_mesial_distal_isthmuses(sorted_isthmus_pairs, pca_axis, cavity_mesh):
+def calculate_mesial_distal_isthmuses(sorted_isthmus_pairs, pca_axis, cavity_mesh):
     """
     Classify isthmus lines into mesial and distal based on PCA axis projection,
     visualize the shortest line from each group, and print their lengths.
