@@ -32,71 +32,65 @@ parser.add_argument("--studentId", type=str, help="studentId")
 args = parser.parse_args()
 mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 
-# X ekseni etrafında -90 derece (radyan cinsinden -π/2) döndürme matrisi
-angle_rad = np.pi / 2
-rotation_matrix = trimesh.transformations.rotation_matrix(
-    angle_rad, [1, 0, 0], point=mesh_trimesh.centroid  # mesh merkezinden döndür
-)
 
-# Mesh'i döndür
-mesh_trimesh.apply_transform(rotation_matrix)
+y_max = mesh_trimesh.bounds[1][1]  # Y eksenindeki maksimum değer
+threshold = y_max - 10.0            # Üstten 10 mm
 
-z_max = mesh_trimesh.bounds[1][2]
-threshold = z_max - 10.0  # Üstten 10 mm
 
-# Her yüzeyin tüm noktaları eşikten büyük mü?
-face_mask = np.all(mesh_trimesh.vertices[mesh_trimesh.faces][:, :, 2] >= threshold, axis=1)
 
-# Yeni mesh oluştur (sadece filtrelenmiş yüzeylerle)
+# Yüzeylerin tüm vertexlerinin Y koordinatlarının threshold'dan büyük veya eşit olup olmadığını kontrol et
+face_mask = np.all(mesh_trimesh.vertices[mesh_trimesh.faces][:, :, 1] >= threshold, axis=1)
+
+# Filtrelenmiş yüzeylerle yeni mesh oluştur
 mesh_trimesh = mesh_trimesh.submesh([face_mask], append=True)
 
-# old_vertices = np.array(mesh_trimesh.vertices)
-# old_faces = np.array(mesh_trimesh.faces)
-# old_normals = np.array(mesh_trimesh.vertex_normals)
-
-# old_tooth_o3d = o3d.geometry.TriangleMesh()
-# old_tooth_o3d.vertices = o3d.utility.Vector3dVector(old_vertices)
-# old_tooth_o3d.triangles = o3d.utility.Vector3iVector(old_faces)
-# old_tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
-
-# old_tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
-
-
-# ### Dişi üst kısmının OBB sine göre rotate et 
-# num_vertices = old_vertices.shape[0]
-# num_samples = int(num_vertices * 0.2)
-
-# # Sort vertices by Z-coordinate (descending order)
-# sorted_indices = np.argsort(old_vertices[:, 2])[::-1]  # Use `1` for Y-axis or `0` for X-axis
-# top_indices = sorted_indices[:num_samples]  # Select top 10%
-
-# # Extract the top points
-# top_points = old_vertices[top_indices]
-
-# # Create a point cloud object
-# pcd = o3d.geometry.PointCloud()
-# pcd.points = o3d.utility.Vector3dVector(top_points)
-
-# # Oriented Bounding Box (OBB) - if you want tighter fit but possibly rotated
-# obb = pcd.get_oriented_bounding_box()
-# obb.color = (0, 1, 0)  # Green
-
-# R = obb.R              # Rotation matrix (3x3)
-# center = obb.center    # Center of OBB
-# T_translate_to_origin = np.eye(4)
-# T_translate_to_origin[:3, 3] = -center
-
-# T_translate_back = np.eye(4)
-# T_translate_back[:3, 3] = center
-# # Create rotation matrix in 4x4
-# T_rotate = np.eye(4)
-# T_rotate[:3, :3] = R  # your rotation matrix
-# T_final = T_translate_back @ T_rotate @ T_translate_to_origin
-
-# mesh_trimesh.apply_transform(T_final)
-# #rotate tooth_o3d 
-#################TODO utils içerisinde bir FONKSİYONA AL
     
+
+old_vertices = np.array(mesh_trimesh.vertices)
+old_faces = np.array(mesh_trimesh.faces)
+old_normals = np.array(mesh_trimesh.vertex_normals)
+
+old_tooth_o3d = o3d.geometry.TriangleMesh()
+old_tooth_o3d.vertices = o3d.utility.Vector3dVector(old_vertices)
+old_tooth_o3d.triangles = o3d.utility.Vector3iVector(old_faces)
+old_tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
+
+old_tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
+
+
+### Dişi üst kısmının OBB sine göre rotate et 
+num_vertices = old_vertices.shape[0]
+num_samples = int(num_vertices * 0.15)
+
+# Sort vertices by Z-coordinate (descending order)
+sorted_indices = np.argsort(old_vertices[:, 1])[::-1]  # Use `1` for Y-axis or `0` for X-axis
+top_indices = sorted_indices[:num_samples]  # Select top 10%
+
+# Extract the top points
+top_points = old_vertices[top_indices]
+# Create a point cloud object
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(top_points)
+obb = pcd.get_oriented_bounding_box()
+T = np.eye(4)
+T[:3, :3] = obb.R.T  
+# Mesh’e uygula
+mesh_trimesh.apply_transform(T)
+
+
+vertices = np.array(mesh_trimesh.vertices)
+faces = np.array(mesh_trimesh.faces)
+normals = np.array(mesh_trimesh.vertex_normals)
+
+tooth_o3d = o3d.geometry.TriangleMesh()
+tooth_o3d.vertices = o3d.utility.Vector3dVector(vertices)
+tooth_o3d.triangles = o3d.utility.Vector3iVector(faces)
+tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
+
+tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
+
+
+
 mesh_source = o3d.io.read_triangle_mesh("input/Master.stl")
 mesh_aligned = o3d.io.read_triangle_mesh(f"StudentTeeth/{args.studentId}.stl")
 
@@ -149,6 +143,20 @@ tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
 
 ##################
 
+"""
+o3d_mesh = o3d.geometry.TriangleMesh()
+o3d_mesh.vertices = o3d.utility.Vector3dVector(mesh_trimesh.vertices)
+o3d_mesh.triangles = o3d.utility.Vector3iVector(mesh_trimesh.faces)
+
+# Simplify
+simplified = o3d_mesh.simplify_quadric_decimation(target_number_of_triangles=10000)
+
+# Optional: Convert back to Trimesh
+mesh_trimesh = trimesh.Trimesh(vertices=np.asarray(simplified.vertices),
+                                     faces=np.asarray(simplified.triangles))
+
+"""
+
 # Compute Mean Curvature using Trimesh
 mean_curvature = trimesh.curvature.discrete_mean_curvature_measure(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
 
@@ -186,12 +194,13 @@ cavity_depth_mesh = create_cylinder_between_points(min_z_point, max_z_point)
 
 right_mesh, left_mesh, right_normal_mean, left_normal_mean = split_side_and_get_normal_means(side_bottom)
 
-
-trimmed_right_mesh = trim_mesh_by_percent(right_mesh,trim_percent=0.20)
-trimmed_left_mesh = trim_mesh_by_percent(left_mesh,trim_percent=0.20)
-
-isthmus_pairs = compute_isthmus_vectors(trimmed_right_mesh, trimmed_left_mesh,num_pairs=10)
-sorted_isthmus_pairs = sort_isthmus_pairs(isthmus_pairs=isthmus_pairs)
+if right_mesh:
+    trimmed_right_mesh = trim_mesh_by_percent(right_mesh,trim_percent=0.20)
+if left_mesh:
+    trimmed_left_mesh = trim_mesh_by_percent(left_mesh,trim_percent=0.20)
+if trimmed_left_mesh and trimmed_right_mesh:
+    isthmus_pairs = compute_isthmus_vectors(trimmed_right_mesh, trimmed_left_mesh,num_pairs=10)
+    sorted_isthmus_pairs = sort_isthmus_pairs(isthmus_pairs=isthmus_pairs)
 
 points, _ = trimesh.sample.sample_surface(mesh_trimesh, 3000)
 
@@ -200,7 +209,8 @@ pca = PCA(n_components=3)
 pca.fit(points)
 pc1 = pca.components_[0]  # Principal axis (first component)
 
-distal_isthmus, mesial_isthmus = calculate_mesial_distal_isthmuses(sorted_isthmus_pairs, pc1, tooth_o3d)
+if sorted_isthmus_pairs:
+    distal_isthmus, mesial_isthmus = calculate_mesial_distal_isthmuses(sorted_isthmus_pairs, pc1, tooth_o3d)
 
 distal_isthmus_width = distal_isthmus[2]
 mesial_isthmus_width = mesial_isthmus[2]
@@ -223,10 +233,17 @@ for i in range(2):
     my_secondary_list = []
 distal_isthmus_points = copy.deepcopy(my_list)
     
+isthmus_calculated = True
 
-
-# distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
-# mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
+try:
+    distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
+    mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
+except :
+    isthmus_cant_calculated = False
+    distal_isthmus_cylinder = o3d.geometry.TriangleMesh()
+    mesial_isthmus_cylinder = o3d.geometry.TriangleMesh()
+    distal_isthmus_width = 0
+    mesial_isthmus_width = 0
 
 
 cavity_bottom.compute_vertex_normals()
@@ -301,8 +318,8 @@ o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes,  write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh , write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh,  write_vertex_colors=True)
-# o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
-# o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesh_aligned.ply", mesh_source , write_vertex_colors = True )
 
 
@@ -327,25 +344,25 @@ score = 0
 #degree ye çevir
 right_angle = np.degrees(np.arccos(right_angle))
 left_angle = np.degrees(np.arccos(left_angle))
+if isthmus_calculated == False: 
+    if mesial_isthmus_width >= 1.5 and mesial_isthmus_width <= 1.99: 
+        score += 10
+        is_mesial_isthmus_width_true = 1 
+    elif (1.0 <= mesial_isthmus_width < 1.5) or (2.01 <= mesial_isthmus_width <= 2.5):
+        score += 5
+        is_mesial_isthmus_width_true = 0.5 
+    elif mesial_isthmus_width < 1.0 or mesial_isthmus_width > 2.5:
+        is_mesial_isthmus_width_true = 0
 
-if mesial_isthmus_width >= 1.5 and mesial_isthmus_width <= 1.99: 
-    score += 10
-    is_mesial_isthmus_width_true = 1 
-elif (1.0 <= mesial_isthmus_width < 1.5) or (2.01 <= mesial_isthmus_width <= 2.5):
-    score += 5
-    is_mesial_isthmus_width_true = 0.5 
-elif mesial_isthmus_width < 1.0 or mesial_isthmus_width > 2.5:
-    is_mesial_isthmus_width_true = 0
 
-
-if distal_isthmus_width >= 1.5 and distal_isthmus_width <= 1.99: 
-    score += 10
-    is_distal_isthmus_width_true = 1 
-elif (1.0 <= distal_isthmus_width < 1.5) or (2.01 <= distal_isthmus_width <= 2.5):
-    score += 5
-    is_distal_isthmus_width_true = 0.5 
-elif distal_isthmus_width < 1.0 or distal_isthmus_width > 2.5:
-    is_distal_isthmus_width_true = 0
+    if distal_isthmus_width >= 1.5 and distal_isthmus_width <= 1.99: 
+        score += 10
+        is_distal_isthmus_width_true = 1 
+    elif (1.0 <= distal_isthmus_width < 1.5) or (2.01 <= distal_isthmus_width <= 2.5):
+        score += 5
+        is_distal_isthmus_width_true = 0.5 
+    elif distal_isthmus_width < 1.0 or distal_isthmus_width > 2.5:
+        is_distal_isthmus_width_true = 0
 
 ## mesial marginal
 if mesial_ridge_distance>=1.2 and mesial_ridge_distance<=1.6:
@@ -433,8 +450,6 @@ elif std_roughness>=10.01 and std_roughness<=40.00:
     is_roughness = 0.5
 elif std_roughness>40.00:
     is_roughness = 0
-
-
 
 
 #Stdout to return

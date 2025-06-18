@@ -52,8 +52,11 @@ def calculate_mesial_distal_isthmuses(sorted_isthmus_pairs, pca_axis, cavity_mes
         p1, p2, d = shortest_distal
         add_line(p1, p2, [1, 0.6, 0])  # Orange
         # print(f"Shortest Distal Isthmus: {d:.3f} mm")
-        
-    return shortest_distal, shortest_mesial
+    if shortest_distal and shortest_mesial:
+        return shortest_distal, shortest_mesial
+    else:
+        return ([0,0,0],[0,0,0],0), ([0,0,0],[0,0,0],0)
+    
 
 
 def show_mesh_dimensions_with_cylinders(mesh):

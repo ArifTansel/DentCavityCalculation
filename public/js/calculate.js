@@ -1,43 +1,30 @@
 function writeData(data) {
-  const right_angle = document.getElementById("right_angle");
-  const left_angle = document.getElementById("left_angle");
-  const cavity_depth = document.getElementById("cavity_depth");
-  const roughness = document.getElementById("roughness");
-  const b_l_length_ratio = document.getElementById("b_l_length_ratio");
-  // const b_l_length = document.getElementById("b_l_length");
-  const m_d_length_ratio = document.getElementById("m_d_length_ratio");
-  // const m_d_length = document.getElementById("m_d_length");
-  const distal_ridge_distance = document.getElementById(
-    "distal_ridge_distance"
-  );
-  const mesial_ridge_distance = document.getElementById(
-    "mesial_ridge_distance"
-  );
-  const distal_isthmus_length = document.getElementById(
-    "distal_isthmus_length"
-  );
-  const mesial_isthmus_length = document.getElementById(
-    "mesial_isthmus_length"
-  );
-  const criticalWarning = document.getElementById("criticalWarning")
-  const score = document.getElementById("score");
-
-  right_angle.innerText = data.right_angle;
-  left_angle.innerText = data.left_angle;
-  cavity_depth.innerText = data.cavity_depth + " mm";
-  roughness.innerText = data.roughness;
-  b_l_length_ratio.innerText = data.b_l_length_ratio;
-  // b_l_length.innerText = data.b_l_length;
-  m_d_length_ratio.innerText = data.m_d_length_ratio;
-  // m_d_length.innerText = data.m_d_length;
-  distal_ridge_distance.innerText = data.distal_ridge_distance;
-  mesial_ridge_distance.innerText = data.mesial_ridge_distance;
-  distal_isthmus_length.innerText = data.distal_isthmus_width;
-  mesial_isthmus_length.innerText = data.mesial_isthmus_width;
-  score.innerText = data.score;
+  function displayValue(element, value, unit = "") {
+    if (value === 0) {
+      element.innerText = "hesaplanamadı";
+    } else {
+      element.innerText = value + unit;
+    }
+  }
+  
+  displayValue(right_angle, data.right_angle , "\u00B0");
+  displayValue(left_angle, data.left_angle, "\u00B0");
+  displayValue(cavity_depth, data.cavity_depth, " mm");
+  displayValue(roughness, data.roughness);
+  displayValue(b_l_length_ratio, data.b_l_length_ratio);
+  // displayValue(b_l_length, data.b_l_length);
+  displayValue(m_d_length_ratio, data.m_d_length_ratio);
+  // displayValue(m_d_length, data.m_d_length);
+  displayValue(distal_ridge_distance, data.distal_ridge_distance , " mm");
+  displayValue(mesial_ridge_distance, data.mesial_ridge_distance , " mm");
+  displayValue(distal_isthmus_length, data.distal_isthmus_width , " mm");
+  displayValue(mesial_isthmus_length, data.mesial_isthmus_width, " mm");
+  displayValue(score, data.score);
+  
   if (data.is_critical_limits_exceeded) {
-    criticalWarning.innerText = "Kavite M-D boyutu, Kavite B-L boyutu, Kavite Derinliği eşik değeri aşıldığı için kaldınız!!!"
-    criticalWarning.style.display = "inline-block"
+    criticalWarning.innerText =
+      "Kavite M-D boyutu, Kavite B-L boyutu, Kavite Derinliği eşik değeri aşıldığı için kaldınız!!!";
+    criticalWarning.style.display = "inline-block";
   }
 }
 function deleteData() {
