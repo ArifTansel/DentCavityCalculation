@@ -1,0 +1,5 @@
+trimesh
+open3d
+numpy
+sklearn
+mysql

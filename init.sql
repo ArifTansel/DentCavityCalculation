@@ -43,7 +43,6 @@ CREATE TABLE cavity_scores (
     score FLOAT
 );
 
-
 --@block
 CREATE TABLE student_list (
     studentID VARCHAR(20) PRIMARY KEY,
@@ -69,18 +68,3 @@ CREATE TABLE student_ply_paths (
     mesial_isthmus_width_mesh_path VARCHAR(255),
     mesh_aligned_path VARCHAR(255)
 );
-
---@block
-DELETE FROM cavity_scores
-
---@block
-DELETE  FROM student_list
---@block
-SELECT s.stlFile, c.* FROM student_list s LEFT JOIN cavity_scores c ON s.studentID = c.studentID WHERE s.studentID = 1111;
---@block
-INSERT INTO student_list (studentID, studentName, studentLastname)
-VALUES (
-    '124',
-    'veli',
-    'mehmed'
-  );

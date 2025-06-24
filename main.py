@@ -18,10 +18,10 @@ BOTTOM_THRESHOLD_PERCENTAGE=0.4
 MEAN_CURVATURE_RADİUS=2
 BASE_DIR = "output"
 ### database infos
-HOST= "localhost"
-USER = "root"
-PASSWORD = "patatoes"
-DATABASE = "cavity_analysis_db"
+HOST= "YOURHOST"
+USER = "YOURUSER"
+PASSWORD = "YOURPASSWORD"
+DATABASE = "YOURDB"
 #TODO Z up a göre çalııyor düzelt Y-up yap onu 
 
 
@@ -34,7 +34,7 @@ mesh_trimesh = trimesh.load_mesh(f"StudentTeeth/{args.studentId}.stl")
 
 
 y_max = mesh_trimesh.bounds[1][1]  # Y eksenindeki maksimum değer
-threshold = y_max - 10.0            # Üstten 10 mm
+threshold = y_max - 8.0            # Üstten 10 mm
 
 
 
@@ -77,6 +77,13 @@ T[:3, :3] = obb.R.T
 # Mesh’e uygula
 mesh_trimesh.apply_transform(T)
 
+o3d_mesh = o3d.geometry.TriangleMesh()
+o3d_mesh.vertices = o3d.utility.Vector3dVector(mesh_trimesh.vertices)
+o3d_mesh.triangles = o3d.utility.Vector3iVector(mesh_trimesh.faces)
+
+simplified = o3d_mesh.simplify_quadric_decimation(target_number_of_triangles=10000)
+mesh_trimesh = trimesh.Trimesh(vertices=np.asarray(simplified.vertices),
+                                     faces=np.asarray(simplified.triangles))
 
 vertices = np.array(mesh_trimesh.vertices)
 faces = np.array(mesh_trimesh.faces)
@@ -134,29 +141,6 @@ vertices = np.array(mesh_trimesh.vertices)
 faces = np.array(mesh_trimesh.faces)
 normals = np.array(mesh_trimesh.vertex_normals)
 
-tooth_o3d = o3d.geometry.TriangleMesh()
-tooth_o3d.vertices = o3d.utility.Vector3dVector(vertices)
-tooth_o3d.triangles = o3d.utility.Vector3iVector(faces)
-tooth_o3d.compute_vertex_normals()# Convert full tooth to Open3D mesh
-
-tooth_o3d.paint_uniform_color([0.8, 0.8, 0.8])  # light gray
-
-##################
-
-"""
-o3d_mesh = o3d.geometry.TriangleMesh()
-o3d_mesh.vertices = o3d.utility.Vector3dVector(mesh_trimesh.vertices)
-o3d_mesh.triangles = o3d.utility.Vector3iVector(mesh_trimesh.faces)
-
-# Simplify
-simplified = o3d_mesh.simplify_quadric_decimation(target_number_of_triangles=10000)
-
-# Optional: Convert back to Trimesh
-mesh_trimesh = trimesh.Trimesh(vertices=np.asarray(simplified.vertices),
-                                     faces=np.asarray(simplified.triangles))
-
-"""
-
 # Compute Mean Curvature using Trimesh
 mean_curvature = trimesh.curvature.discrete_mean_curvature_measure(mesh_trimesh, mesh_trimesh.vertices, MEAN_CURVATURE_RADİUS)
 
@@ -165,7 +149,7 @@ cavity_indices = np.where(mean_curvature < 0.4)[0]  # Select all vertices with n
 largest_cavity_mesh, largest_cavity_indices = extract_largest_cavity(vertices, faces, cavity_indices)
 cavity_vertices= np.asarray(largest_cavity_mesh.vertices)
 
-top_tooth_mesh = extract_top_percentage(tooth_o3d) 
+top_tooth_mesh = extract_top_percentage(tooth_o3d ,100.0 ) 
     
 tooth_dimension_cylinder_meshes, tooth_width, tooth_length = show_mesh_dimensions_with_cylinders(top_tooth_mesh)
 cavity_dimension_cylinder_meshes, cavity_width, cavity_length = show_mesh_dimensions_with_cylinders(largest_cavity_mesh)
@@ -239,9 +223,7 @@ try:
     distal_isthmus_cylinder = create_cylinder_between_points(distal_isthmus_points[0],distal_isthmus_points[1]) # color değişkeni ile renk verebilirsin 
     mesial_isthmus_cylinder = create_cylinder_between_points(mesial_isthmus_points[0],mesial_isthmus_points[1])
 except :
-    isthmus_cant_calculated = False
-    distal_isthmus_cylinder = o3d.geometry.TriangleMesh()
-    mesial_isthmus_cylinder = o3d.geometry.TriangleMesh()
+    isthmus_calculated = False
     distal_isthmus_width = 0
     mesial_isthmus_width = 0
 
@@ -251,17 +233,6 @@ bottom_normal_mean = np.mean(np.asarray(cavity_bottom.vertex_normals),axis=0)
 
 right_angle = np.dot(right_normal_mean, bottom_normal_mean)
 left_angle = np.dot(left_normal_mean, bottom_normal_mean)
-
-
-## calculate marginal ridge widths 
-# outer_mesial_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=1) 
-# cavity_mesial_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=1) 
-# outer_distal_point = get_highest_point_near_mid_y(tooth_o3d , 0 , mesial=-1) 
-# cavity_distal_point = get_highest_point_near_mid_y(largest_cavity_mesh , 0 , mesial=-1) 
-
-# mesial_ridge_distance = calculate_oklidian_length_point(outer_mesial_point, cavity_mesial_point )
-# distal_ridge_distance = calculate_oklidian_length_point(outer_distal_point, cavity_distal_point )
-
 
 
 
@@ -309,6 +280,8 @@ distal_ridge_width_mesh.paint_uniform_color([0.0, 1.0, 0.0])
 #ALL MESHES : colored_roughness, cavity_bottom, line_set, largest_cavity_mesh, tooth_o3d  ,cylinder_mesh ,distal_ridge_width_mesh ,mesial_ridge_width_mesh
 mkdir = args.studentId
 os.makedirs(f"output/{mkdir}",exist_ok=True)
+o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/old_tooth.ply", old_tooth_o3d , write_vertex_colors=True)
+
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/colored_roughness.ply", colored_roughness , write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_bottom.ply", cavity_bottom ,  write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/largest_cavity_mesh.ply",  largest_cavity_mesh ,  write_vertex_colors=True)
@@ -318,10 +291,10 @@ o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/tooth_dimension_cylinder_meshes.
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/cavity_dimension_cylinder_meshes.ply", cavity_dimension_cylinder_meshes,  write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_ridge_width_mesh.ply", distal_ridge_width_mesh , write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_ridge_width_mesh.ply", mesial_ridge_width_mesh,  write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
-o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
 o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesh_aligned.ply", mesh_source , write_vertex_colors = True )
-
+if isthmus_calculated  : 
+    o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/distal_isthmus_mesh.ply", distal_isthmus_cylinder, write_vertex_colors=True)
+    o3d.io.write_triangle_mesh(f"{BASE_DIR}/{mkdir}/mesial_isthmus_mesh.ply", mesial_isthmus_cylinder, write_vertex_colors=True)
 
 b_l_length_ratio = (tooth_width - cavity_width) / tooth_width
 m_d_length_ratio = (tooth_length - cavity_length) / tooth_length
@@ -344,7 +317,7 @@ score = 0
 #degree ye çevir
 right_angle = np.degrees(np.arccos(right_angle))
 left_angle = np.degrees(np.arccos(left_angle))
-if isthmus_calculated == False: 
+if isthmus_calculated : 
     if mesial_isthmus_width >= 1.5 and mesial_isthmus_width <= 1.99: 
         score += 10
         is_mesial_isthmus_width_true = 1 

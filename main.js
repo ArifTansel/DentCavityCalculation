@@ -10,10 +10,10 @@ const port = 3000;
 app.use(express.json());
 // database connection
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "patatoes",
-  database: "cavity_analysis_db",
+  host: "YOURHOST",
+  user: "YOURUSER",
+  password: "YOURPASSWD",
+  database: "YOURDB",
 });
 
 db.connect((err) => {
